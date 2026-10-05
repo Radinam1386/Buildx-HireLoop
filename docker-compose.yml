@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: sqlite:////data/hireloop.db
+    volumes:
+      - hl_data:/data
+    restart: unless-stopped
+  web:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+volumes:
+  hl_data: {}
