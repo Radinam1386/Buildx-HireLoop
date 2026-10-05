@@ -1,8 +1,29 @@
 "use strict";
 
 const $ = (selector) => document.querySelector(selector);
-const state = { user: null, profile: {}, messages: [], jobs: [], search: null, matches: [], resumes: [], selectedResume: null, configured: false, sources: [], usage: {}, authMode: "login" };
-const titles = { interview: "گفت‌وگو درباره تجربه شما", jobs: "جست‌وجوی فرصت‌های شغلی", resumes: "رزومه‌های شما", profile: "بررسی و تأیید پرونده" };
+const state = {
+  user: null,
+  profile: {},
+  messages: [],
+  jobs: [],
+  search: null,
+  matches: [],
+  resumes: [],
+  selectedResume: null,
+  configured: false,
+  sources: [],
+  usage: {},
+  authMode: "login",
+  currentView: "interview"
+};
+
+const titles = {
+  interview: "گفت‌وگو درباره تجربه شما",
+  jobs: "جست‌وجوی فرصت‌های شغلی",
+  resumes: "رزومه‌های شما",
+  profile: "بررسی و تأیید پرونده"
+};
+
 const emptyChatTemplate = $("#chat-empty").cloneNode(true);
 let noticeTimer;
 let sessionVersion = 0;
@@ -99,9 +120,69 @@ function safeLink(url, label, className = "") {
   } catch { return null; }
 }
 
+function updateStepper(currentView) {
+  const steps = [
+    { id: "interview", index: 1 },
+    { id: "jobs", index: 2 },
+    { id: "resumes", index: 3 },
+    { id: "profile", index: 4 },
+  ];
+
+  const profileReady = Boolean(state.profile?.confirmed || (state.profile?.skills?.length && state.profile?.full_name));
+  const jobsReady = Boolean(state.jobs?.length);
+  const resumeReady = Boolean(state.resumes?.length);
+
+  const completedMap = {
+    interview: profileReady,
+    jobs: jobsReady,
+    resumes: resumeReady,
+    profile: Boolean(state.profile?.confirmed),
+  };
+
+  const stepItems = document.querySelectorAll(".step-item");
+  const dividers = document.querySelectorAll(".step-divider");
+
+  stepItems.forEach((btn, idx) => {
+    const stepId = btn.dataset.step;
+    const isActive = stepId === currentView;
+    const isCompleted = completedMap[stepId];
+
+    btn.classList.toggle("active", isActive);
+    btn.classList.toggle("completed", isCompleted && !isActive);
+    if (isActive) btn.setAttribute("aria-current", "step");
+    else btn.removeAttribute("aria-current");
+
+    if (dividers[idx]) {
+      dividers[idx].classList.toggle("completed", isCompleted);
+    }
+  });
+}
+
+function updateDossierProgress() {
+  const profile = state.profile || {};
+  let score = 10; // Base score for account
+  if (profile.full_name) score += 15;
+  if (profile.city) score += 10;
+  if (profile.skills?.length) score += Math.min(30, profile.skills.length * 6);
+  if (profile.projects?.length) score += Math.min(20, profile.projects.length * 10);
+  if (profile.experience?.length) score += Math.min(15, profile.experience.length * 8);
+  if (profile.summary) score += 10;
+  if (profile.confirmed) score = 100;
+
+  score = Math.min(100, score);
+  const progressBar = $("#dossier-progress-bar");
+  if (progressBar) {
+    progressBar.style.width = `${score}%`;
+    progressBar.setAttribute("aria-valuenow", String(score));
+  }
+}
+
 function showAuth() {
   changeSession();
-  Object.assign(state, { user: null, profile: {}, messages: [], jobs: [], search: null, matches: [], resumes: [], selectedResume: null, usage: {} });
+  Object.assign(state, {
+    user: null, profile: {}, messages: [], jobs: [],
+    search: null, matches: [], resumes: [], selectedResume: null, usage: {}
+  });
   $("#profile-form").reset();
   $("#profile-projects").replaceChildren();
   $("#profile-experience").replaceChildren();
@@ -141,7 +222,10 @@ function setAuthMode(mode) {
 
 function showView(view, focus = true) {
   if (!titles[view]) return;
-  for (const section of document.querySelectorAll(".view")) section.hidden = section.id !== `view-${view}`;
+  state.currentView = view;
+  for (const section of document.querySelectorAll(".view")) {
+    section.hidden = section.id !== `view-${view}`;
+  }
   for (const button of document.querySelectorAll("[data-view]")) {
     const active = button.dataset.view === view;
     button.classList.toggle("active", active);
@@ -149,6 +233,7 @@ function showView(view, focus = true) {
     else button.removeAttribute("aria-current");
   }
   $("#page-title").textContent = titles[view];
+  updateStepper(view);
   if (view === "profile") fillProfileForm();
   if (focus) $("#main").focus({ preventScroll: true });
 }
@@ -161,8 +246,10 @@ function renderUsage(usage) {
 
 function renderConfiguration() {
   $("#config-banner").hidden = state.configured;
-  for (const button of document.querySelectorAll("[data-ai], #chat-submit, #match-jobs")) button.disabled = !state.configured;
-  $("#chat-status").textContent = state.configured ? "هر ارسال حداکثر ۳ درخواست هوش مصنوعی مصرف می‌کند." : "گفت‌وگو پس از تنظیم سرویس فعال می‌شود.";
+  for (const button of document.querySelectorAll("[data-ai], #chat-submit, #match-jobs")) {
+    button.disabled = !state.configured;
+  }
+  $("#chat-status").textContent = state.configured ? "پاسخ‌ها ذخیره می‌شوند." : "گفت‌وگو پس از تنظیم سرویس فعال می‌شود.";
   const filters = $("#source-filters");
   filters.replaceChildren();
   for (const source of state.sources) {
@@ -177,30 +264,47 @@ function renderConfiguration() {
 }
 
 function renderDossier() {
-  const profile = state.profile;
+  const profile = state.profile || {};
   $("#dossier-name").textContent = profile.full_name || state.user?.name || "نام شما";
   $("#dossier-location").textContent = [profile.city, profile.remote ? "آماده دورکاری" : ""].filter(Boolean).join(" · ") || "شهر هنوز ثبت نشده";
+  
   const skills = $("#dossier-skills");
   skills.replaceChildren();
-  for (const skill of profile.skills || []) skills.append(element("span", "chip", skill));
-  if (!skills.childElementCount) skills.append(element("p", "muted", "مهارت‌ها از گفت‌وگو یا ویرایش پرونده اضافه می‌شوند."));
+  for (const skill of profile.skills || []) {
+    skills.append(element("span", "chip", skill));
+  }
+  if (!skills.childElementCount) {
+    skills.append(element("p", "muted", "مهارت‌ها از گفت‌وگو یا ویرایش پرونده اضافه می‌شوند."));
+  }
+
   const work = $("#dossier-work");
   work.replaceChildren();
   for (const item of [...(profile.experience || []), ...(profile.projects || [])].slice(0, 4)) {
     const entry = element("div", "dossier-item");
-    entry.append(element("strong", "", item.role || item.name || item.company), element("p", "muted", item.company || item.description));
+    entry.append(
+      element("strong", "", item.role || item.name || item.company),
+      element("p", "muted", item.company || item.description)
+    );
     work.append(entry);
   }
-  if (!work.childElementCount) work.append(element("p", "muted", "از یک تجربه یا پروژه شروع کنید."));
+  if (!work.childElementCount) {
+    work.append(element("p", "muted", "از یک تجربه یا پروژه فرانت‌اند شروع کنید."));
+  }
+
   $("#dossier-summary").textContent = profile.summary || "خلاصه حرفه‌ای شما پس از ثبت تجربه‌ها اینجا قرار می‌گیرد.";
   $("#profile-status").textContent = profile.confirmed ? "اطلاعات تأیید شده" : "نیاز به بررسی و تأیید شما";
   $("#profile-status").classList.toggle("confirmed", Boolean(profile.confirmed));
+  
+  updateDossierProgress();
 }
 
 function appendMessage(message) {
   const row = element("div", `message ${message.role === "user" ? "user" : "assistant"}`);
   const text = message.role === "user" ? message.content : String(message.content || "").replace(/\*\*([^*]+)\*\*/g, "$1");
-  row.append(element("div", "message-label", message.role === "user" ? "شما" : "راهنمای مسیر"), element("div", "message-body", text));
+  row.append(
+    element("div", "message-label", message.role === "user" ? "شما" : "دستیار کاریابی"),
+    element("div", "message-body", text)
+  );
   $("#messages").append(row);
   $("#messages").scrollTop = $("#messages").scrollHeight;
   return row;
@@ -210,49 +314,80 @@ function renderMessages() {
   const box = $("#messages");
   const empty = emptyChatTemplate.cloneNode(true);
   box.replaceChildren();
-  if (!state.messages.length) box.append(empty);
-  else for (const message of state.messages) appendMessage(message);
+  if (!state.messages.length) {
+    box.append(empty);
+  } else {
+    for (const message of state.messages) appendMessage(message);
+  }
   renderChatActions();
 }
 
 function renderChatActions() {
   $("#chat-actions")?.remove();
   if (!state.user || (!state.search && state.profile.confirmed)) return;
+  
   const row = element("div", "message assistant");
   row.id = "chat-actions";
   const body = element("div", "message-body");
+  
   if (state.search) {
     const search = state.search;
     body.append(element("strong", "", `${(search.jobs || []).length.toLocaleString("fa-IR")} آگهی در نتایج این جست‌وجو`));
     if (search.query) body.append(element("p", "", `عبارت جست‌وجو: ${search.query}`));
-    const location = !Object.hasOwn(search,"city") ? "فیلترهای این جست‌وجوی قبلی ثبت نشده‌اند؛ دوباره جست‌وجو کنید" : search.city ? search.city + (search.remote ? " یا دورکاری" : "") : search.remote ? "فقط دورکاری" : "بدون محدودیت شهر یا دورکاری";
+    const location = !Object.hasOwn(search, "city")
+      ? "فیلترهای این جست‌وجوی قبلی ثبت نشده‌اند؛ دوباره جست‌وجو کنید"
+      : search.city
+      ? search.city + (search.remote ? " یا دورکاری" : "")
+      : search.remote
+      ? "فقط دورکاری"
+      : "بدون محدودیت شهر یا دورکاری";
     body.append(element("p", "", `فیلتر مکان: ${location}`));
-    if (search.broadened) body.append(element("p", "", `جست‌وجوی اولیه برای «${search.requested?.query || ""}» نتیجه نداشت؛ این جست‌وجوی گسترده‌تر با یک مهارت پروفایل و بدون فیلتر مکان انجام شده است. این‌ها تطابق دقیق با درخواست اولیه نیستند.`));
+    if (search.broadened) {
+      body.append(element("p", "", `جست‌وجوی اولیه برای «${search.requested?.query || ""}» نتیجه نداشت؛ این جست‌وجوی گسترده‌تر با یک مهارت پروفایل و بدون فیلتر مکان انجام شده است. این‌ها تطابق دقیق با درخواست اولیه نیستند.`));
+    }
     for (const source of search.sources || []) {
       const status = source.status === "error" ? "دسترسی ناموفق" : source.count ? `${source.count} نتیجه` : "بدون نتیجه";
       body.append(element("p", "", `${source.name || source.id}: ${status}${source.error ? `؛ ${source.error}` : ""}`));
     }
     const jobs = element("button", "button secondary", "مشاهده نتایج و وضعیت منابع");
-    jobs.type = "button"; jobs.dataset.go = "jobs"; body.append(jobs);
+    jobs.type = "button";
+    jobs.dataset.go = "jobs";
+    body.append(jobs);
   }
+
   if (!state.profile.confirmed) {
     body.append(element("p", "", "برای جست‌وجو نیازی به تأیید نیست. پیش از ساخت رزومه، اطلاعات را بررسی و تأیید کنید."));
     const confirm = element("button", "button primary", "بررسی و تأیید پروفایل");
-    confirm.type = "button"; confirm.dataset.go = "profile"; body.append(confirm);
+    confirm.type = "button";
+    confirm.dataset.go = "profile";
+    body.append(confirm);
   }
-  row.append(body); $("#messages").append(row);
+  
+  row.append(body);
+  $("#messages").append(row);
   $("#messages").scrollTop = $("#messages").scrollHeight;
 }
 
-function lines(value) { return String(value || "").split(/\n/).map((line) => line.trim()).filter(Boolean); }
-function printableItems(items) { return (items || []).map((item) => typeof item === "string" ? item : Object.values(item).filter(Boolean).join(" | ")).join("\n"); }
+function lines(value) {
+  return String(value || "").split(/\n/).map((line) => line.trim()).filter(Boolean);
+}
+
+function printableItems(items) {
+  return (items || []).map((item) => typeof item === "string" ? item : Object.values(item).filter(Boolean).join(" | ")).join("\n");
+}
 
 function addProfileEntry(key, item = {}) {
   const container = $(`#profile-${key}`);
-  if (container.childElementCount >= 12) { notify("حداکثر ۱۲ مورد می‌توانید ثبت کنید.", true); return; }
+  if (container.childElementCount >= 12) {
+    notify("حداکثر ۱۲ مورد می‌توانید ثبت کنید.", true);
+    return;
+  }
   const row = element("div", "profile-entry");
   row.dataset.profileEntry = key;
-  const fields = key === "projects" ? [["name", "نام پروژه"], ["description", "نقش شما و نتیجه پروژه"], ["url", "پیوند پروژه، اختیاری"]] : [["company", "نام شرکت"], ["role", "عنوان شغلی"], ["description", "شرح تجربه"]];
+  const fields = key === "projects"
+    ? [["name", "نام پروژه"], ["description", "نقش شما، فناوری‌ها و نتیجه پروژه"], ["url", "پیوند پروژه آنلاین / گیت‌هاب (اختیاری)"]]
+    : [["company", "نام شرکت یا تیم"], ["role", "عنوان شغلی / کارآموزی"], ["description", "شرح وظایف و دستاوردها"]];
+  
   for (const [field, title] of fields) {
     const label = element("label", "", title);
     const input = element(field === "description" ? "textarea" : "input");
@@ -273,7 +408,9 @@ function addProfileEntry(key, item = {}) {
 
 function fillProfileForm() {
   const form = $("#profile-form");
-  for (const key of ["full_name", "email", "phone", "city", "summary"]) form.elements[key].value = state.profile[key] || "";
+  for (const key of ["full_name", "email", "phone", "city", "summary"]) {
+    form.elements[key].value = state.profile[key] || "";
+  }
   form.elements.remote.checked = Boolean(state.profile.remote);
   form.elements.skills.value = (state.profile.skills || []).join("، ");
   for (const key of ["projects", "experience"]) {
@@ -287,14 +424,19 @@ function fillProfileForm() {
 function profileFromForm() {
   const form = $("#profile-form");
   const profile = { ...state.profile, confirmed: true };
-  for (const key of ["full_name", "email", "phone", "city", "summary"]) profile[key] = form.elements[key].value.trim();
+  for (const key of ["full_name", "email", "phone", "city", "summary"]) {
+    profile[key] = form.elements[key].value.trim();
+  }
   profile.remote = form.elements.remote.checked;
   profile.skills = [...new Set(form.elements.skills.value.split(/[,،\n]/).map((value) => value.trim()).filter(Boolean))];
   for (const key of ["projects", "experience"]) {
     profile[key] = [...document.querySelectorAll(`[data-profile-entry="${key}"]`)].map((row) =>
-      Object.fromEntries([...row.querySelectorAll("[data-entry-field]")].map((input) => [input.dataset.entryField, input.value])));
+      Object.fromEntries([...row.querySelectorAll("[data-entry-field]")].map((input) => [input.dataset.entryField, input.value]))
+    );
   }
-  for (const key of ["education", "languages"]) profile[key] = lines(form.elements[key].value);
+  for (const key of ["education", "languages"]) {
+    profile[key] = lines(form.elements[key].value);
+  }
   return profile;
 }
 
@@ -309,9 +451,15 @@ function renderSources(sources) {
   }
 }
 
-function emptyState(title, description) {
+function emptyState(title, description, buttonLabel = null, goView = null) {
   const box = element("div", "panel empty-state");
   box.append(element("h3", "", title), element("p", "", description));
+  if (buttonLabel && goView) {
+    const btn = element("button", "button primary", buttonLabel);
+    btn.type = "button";
+    btn.dataset.go = goView;
+    box.append(btn);
+  }
   return box;
 }
 
@@ -319,44 +467,64 @@ function renderJobs() {
   const box = $("#job-results");
   box.replaceChildren();
   $("#job-toolbar").hidden = !state.jobs.length;
-  $("#job-count").textContent = `${state.jobs.length.toLocaleString("fa-IR")} فرصت پیدا شد`;
-  $("#match-jobs").textContent = state.jobs.length > 12 ? "مقایسه ۱۲ فرصت اول با پرونده من" : "مقایسه با پرونده من";
+  $("#job-count").textContent = `${state.jobs.length.toLocaleString("fa-IR")} فرصت شغلی پیدا شد`;
+  $("#match-jobs").textContent = state.jobs.length > 12 ? "مقایسه ۱۲ فرصت اول با پرونده من" : "مقایسه و سنجش تناسب با پرونده من";
+  
   if (!state.jobs.length) {
     box.append(emptyState("آگهی‌ای برای این جست‌وجو پیدا نشد.", "عبارت جست‌وجو را کوتاه‌تر کنید، شهر را حذف کنید یا منبع دیگری انتخاب کنید. وضعیت هر منبع بالای این بخش آمده است."));
     return;
   }
+
   for (const [index, job] of state.jobs.entries()) {
     const card = element("article", "panel job-card");
     const body = element("div");
-    body.append(element("h3", "", job.title), element("p", "job-company", [job.company, job.location].filter(Boolean).join(" · ") || "شرکت و محل کار در نتیجه مشخص نیست"));
+    body.append(
+      element("h3", "", job.title),
+      element("p", "job-company", [job.company, job.location].filter(Boolean).join(" · ") || "شرکت و محل کار در نتیجه مشخص نیست")
+    );
+
     const evidence = element("div", "job-evidence");
     const sourceName = state.sources.find((source) => source.id === job.source)?.name || job.source || "نامشخص";
-    evidence.append(element("span", "", `منبع: ${sourceName}`), element("span", job.verified ? "verified" : "", ["snippet", "search_snippet"].includes(job.evidence_type) ? "نتیجه نمایه‌شده جست‌وجو" : job.verified ? "اطلاعات صفحه منبع" : "جزئیات در صفحه منبع نیاز به بررسی دارد"));
+    evidence.append(
+      element("span", "", `منبع: ${sourceName}`),
+      element("span", job.verified ? "verified" : "", ["snippet", "search_snippet"].includes(job.evidence_type) ? "نتیجه نمایه‌شده جست‌وجو" : job.verified ? "اطلاعات صفحه منبع" : "جزئیات در صفحه منبع نیاز به بررسی دارد")
+    );
     if (job.checked_at) {
       const date = new Date(job.checked_at);
       if (!Number.isNaN(date.getTime())) evidence.append(element("span", "", `بررسی: ${date.toLocaleDateString("fa-IR")}`));
     }
     body.append(evidence);
+
     if (job.description) body.append(element("p", "job-description", job.description));
+
     const chips = element("div", "chips");
     for (const skill of job.skills || []) chips.append(element("span", "chip", skill));
     body.append(chips);
+
     const actions = element("div", "job-actions");
-    const source = safeLink(job.url, "مشاهده آگهی ↗");
+    const source = safeLink(job.url, "مشاهده در سایت مرجع ↗");
     if (source) actions.append(source);
-    const resume = element("button", "button secondary", "ساخت رزومه برای این شغل");
+
+    // Single primary action per card
+    const resume = element("button", "button primary", "ساخت رزومه برای این شغل");
     resume.type = "button";
     resume.dataset.resumeJob = index;
     resume.setAttribute("data-ai", "");
     resume.disabled = !state.configured;
     actions.append(resume, element("span", "cost-note", "یک درخواست هوش مصنوعی"));
     card.append(body, actions);
+
     const match = state.matches.find((item) => String(item.id) === String(job.id));
     if (match) {
       const section = element("div", "job-match");
       const score = Number(match.score);
-      section.append(element("strong", "", Number.isFinite(score) ? `ارزیابی تناسب: ${score.toLocaleString("fa-IR")} از ۱۰۰` : "ارزیابی تناسب"), element("p", "", match.reason));
-      if (match.gaps?.length) section.append(element("p", "match-gaps", `فاصله‌های مهارتی: ${match.gaps.join("، ")}`));
+      section.append(
+        element("strong", "", Number.isFinite(score) ? `ارزیابی تناسب شغلی: ${score.toLocaleString("fa-IR")} از ۱۰۰` : "ارزیابی تناسب"),
+        element("p", "", `چرا مناسب است: ${match.reason}`)
+      );
+      if (match.gaps?.length) {
+        section.append(element("p", "match-gaps", `چه چیزهایی کم است (فاصله‌های مهارتی): ${match.gaps.join("، ")}`));
+      }
       card.append(section);
     }
     box.append(card);
@@ -376,7 +544,10 @@ function renderResumeList() {
     const button = element("button", `resume-item${state.selectedResume?.id === resume.id ? " active" : ""}`);
     button.type = "button";
     button.dataset.openResume = resume.id;
-    button.append(element("strong", "", resume.title || "رزومه"), element("span", "", resumeDate(resume)));
+    button.append(
+      element("strong", "", resume.title || "رزومه"),
+      element("span", "", resumeDate(resume))
+    );
     box.append(button);
   }
 }
@@ -386,6 +557,7 @@ function renderResume(resume) {
   renderResumeList();
   const box = $("#resume-preview");
   box.replaceChildren();
+  
   const toolbar = element("div", "resume-toolbar");
   const print = element("a", "button secondary", "چاپ / ذخیره PDF");
   print.href = `/api/resumes/${encodeURIComponent(resume.id)}/print`;
@@ -393,56 +565,101 @@ function renderResume(resume) {
   print.rel = "noopener noreferrer";
   toolbar.append(element("span", "", resume.title || "پیش‌نمایش رزومه"), print);
   box.append(toolbar);
+
   const content = resume.content || {};
   const profile = content.profile || {};
   const doc = element("div", "resume-document");
-  doc.append(element("h2", "", profile.full_name || "رزومه"));
+  doc.append(element("h2", "", profile.full_name || "رزومه اختصاصی"));
+
   const contact = element("div", "resume-contact");
-  for (const value of [profile.email, profile.phone, profile.city]) if (value) contact.append(element("span", "", value));
+  for (const value of [profile.email, profile.phone, profile.city]) {
+    if (value) contact.append(element("span", "", value));
+  }
   doc.append(contact);
+
   function section(title) {
     const node = element("section", "resume-section");
     node.append(element("h3", "", title));
     doc.append(node);
     return node;
   }
-  if (content.summary || profile.summary) section("خلاصه حرفه‌ای").append(element("p", "", content.summary || profile.summary));
+
+  if (content.summary || profile.summary) {
+    section("خلاصه حرفه‌ای").append(element("p", "", content.summary || profile.summary));
+  }
+
   if (profile.skills?.length) {
     const skills = element("div", "chips");
     for (const value of profile.skills) skills.append(element("span", "chip", value));
-    section("مهارت‌ها").append(skills);
+    section("مهارت‌های تخصصی").append(skills);
   }
-  for (const [key, title] of [["experience", "سابقه کاری"], ["projects", "پروژه‌ها"]]) {
+
+  for (const [key, title] of [["experience", "سوابق کاری و کارآموزی"], ["projects", "پروژه‌ها و نمونه‌کارها"]]) {
     if (!profile[key]?.length) continue;
     const group = section(title);
     for (const item of profile[key]) {
       const entry = element("div", "resume-entry");
-      entry.append(element("strong", "", [item.role || item.name, item.company].filter(Boolean).join(" · ")), element("p", "", item.description));
+      entry.append(
+        element("strong", "", [item.role || item.name, item.company].filter(Boolean).join(" · ")),
+        element("p", "", item.description)
+      );
       const url = safeLink(item.url, item.url);
       if (url) entry.append(url);
       group.append(entry);
     }
   }
+
   for (const [key, title] of [["education", "تحصیلات"], ["languages", "زبان‌ها"]]) {
     if (profile[key]?.length) section(title).append(element("p", "", printableItems(profile[key])));
   }
+
   for (const note of content.notes || []) doc.append(element("p", "resume-note", note));
   box.append(doc);
+
+  // Refine Feedback Form
   const form = element("form", "resume-feedback");
   form.id = "refine-form";
-  const label = element("label", "", "کدام مهارت‌ها یا پروژه‌ها برجسته‌تر شوند؟");
+  const label = element("label", "", "بازخورد و اصلاح رزومه (چه مهارت‌ها یا پروژه‌هایی اولویت یابند؟)");
+  
+  // Quick Feedback Chips
+  const quickChips = element("div", "quick-feedback-chips");
+  const chipSuggestions = [
+    "دورکاری می‌خواهم",
+    "این آگهی را نمی‌خواهم",
+    "پروژه‌ها قبل از سوابق قرار گیرند",
+    "مهارت‌های فرانت‌اند پررنگ‌تر شوند"
+  ];
+  for (const text of chipSuggestions) {
+    const chipBtn = element("button", "chip chip-action", text);
+    chipBtn.type = "button";
+    chipBtn.addEventListener("click", () => {
+      const current = form.elements.feedback.value.trim();
+      form.elements.feedback.value = current ? `${current}؛ ${text}` : text;
+      form.elements.feedback.focus();
+    });
+    quickChips.append(chipBtn);
+  }
+
   const feedback = element("textarea");
   feedback.name = "feedback";
   feedback.rows = 3;
   feedback.required = true;
   feedback.maxLength = 3000;
-  feedback.placeholder = "مثلاً پروژه مرتبط را در ابتدای رزومه قرار دهید یا مهارت‌های مرتبط را اول بنویسید.";
-  label.append(feedback);
+  feedback.placeholder = "مثلاً: پروژه مرتبط فرانت‌اند در ابتدای رزومه قرار گیرد یا ترتیب مهارت‌ها تغییر کند…";
+  
+  label.append(quickChips, feedback);
+
+  // Single primary CTA button for resume refinement
   const button = element("button", "button primary", "اصلاح رزومه");
   button.type = "submit";
   button.setAttribute("data-ai", "");
   button.disabled = !state.configured;
-  form.append(label, button, element("p", "cost-note", "اصلاح ترتیب و انتخاب مهارت‌ها و پروژه‌ها یک درخواست مصرف می‌کند. برای تغییر خلاصه یا سوابق، بخش اطلاعات من را ویرایش و تأیید کنید."));
+
+  form.append(
+    label,
+    button,
+    element("p", "cost-note", "اصلاح ترتیب و انتخاب مهارت‌ها و پروژه‌ها یک درخواست مصرف می‌کند. برای تغییر خلاصه یا سوابق، بخش اطلاعات من را ویرایش و تأیید کنید.")
+  );
   box.append(form);
 }
 
@@ -462,35 +679,58 @@ async function createResume(button, payload) {
     const data = await api("/api/resumes", { method: "POST", body: payload });
     renderUsage(data.usage);
     rememberResume(data.resume);
-    notify("رزومه آماده است. متن را پیش از ارسال بررسی کنید.");
+    notify("رزومه اختصاصی آماده شد. لطفاً متن را بررسی کنید.");
   });
 }
 
 async function loadAccount() {
   const data = await api("/api/me");
-  Object.assign(state, { user: data.user, profile: data.profile || {}, messages: data.messages || [], resumes: data.resumes || [], usage: data.usage || {}, configured: Boolean(data.configured) });
+  Object.assign(state, {
+    user: data.user,
+    profile: data.profile || {},
+    messages: data.messages || [],
+    resumes: data.resumes || [],
+    usage: data.usage || {},
+    configured: Boolean(data.configured)
+  });
   state.jobs = data.search?.jobs || [];
   state.search = data.search?.sources?.length ? data.search : null;
   state.matches = [];
   state.selectedResume = null;
+  
   $("#account-name").textContent = state.user.name;
   $("#auth-view").hidden = true;
   $("#boot").hidden = true;
   $("#workspace").hidden = false;
-  renderConfiguration(); renderDossier(); renderMessages(); renderResumeList(); renderUsage();
-  if (data.search) { renderJobs(); renderSources(data.search.sources); }
-  else {
-    $("#job-results").replaceChildren(emptyState("فرصت بعدی را جست‌وجو کنید.", "عنوان شغل یا یک مهارت را بنویسید و منابع موردنظر را انتخاب کنید."));
+
+  renderConfiguration();
+  renderDossier();
+  renderMessages();
+  renderResumeList();
+  renderUsage();
+
+  if (data.search) {
+    renderJobs();
+    renderSources(data.search.sources);
+  } else {
+    $("#job-results").replaceChildren(emptyState("فرصت‌های شغلی را جست‌وجو کنید.", "عنوان شغل یا یک مهارت را بنویسید و منابع مورد نظر را انتخاب کنید."));
     $("#job-toolbar").hidden = true;
     $("#source-status").replaceChildren();
   }
-  if (state.resumes.length) renderResume(state.resumes[0]);
-  else $("#resume-preview").replaceChildren(emptyState("اولین رزومه هنوز ساخته نشده.", "پرونده را تأیید کنید، سپس در بخش فرصت‌های شغلی یک آگهی انتخاب کنید."));
+
+  if (state.resumes.length) {
+    renderResume(state.resumes[0]);
+  } else {
+    $("#resume-preview").replaceChildren(emptyState("اولین رزومه هنوز ساخته نشده است.", "پرونده را تأیید کنید، سپس در بخش فرصت‌های شغلی یک آگهی انتخاب کنید.", "دیدن فرصت‌های شغلی", "jobs"));
+  }
+
   showView("interview", false);
 }
 
+// Event Listeners
 $("#login-tab").addEventListener("click", () => setAuthMode("login"));
 $("#register-tab").addEventListener("click", () => setAuthMode("register"));
+
 $("#auth-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (authBusy) return;
@@ -507,28 +747,47 @@ $("#auth-form").addEventListener("submit", async (event) => {
     await api(`/api/auth/${state.authMode}`, { method: "POST", body });
     await loadAccount();
     $("#auth-password").value = "";
-  } catch (error) { if (error.name !== "SessionChanged") { $("#auth-error").textContent = error.message; $("#auth-error").hidden = false; } }
-  finally { authBusy = false; button.disabled = false; button.textContent = original; }
+  } catch (error) {
+    if (error.name !== "SessionChanged") {
+      $("#auth-error").textContent = error.message;
+      $("#auth-error").hidden = false;
+    }
+  } finally {
+    authBusy = false;
+    button.disabled = false;
+    button.textContent = original;
+  }
 });
 
 $("#logout").addEventListener("click", async () => {
   if (authBusy) return;
   authBusy = true;
   changeSession();
-  try { await pending($("#logout"), "در حال خروج…", async () => { await api("/api/auth/logout", { method: "POST" }); showAuth(); }); }
-  finally { authBusy = false; }
+  try {
+    await pending($("#logout"), "در حال خروج…", async () => {
+      await api("/api/auth/logout", { method: "POST" });
+      showAuth();
+    });
+  } finally {
+    authBusy = false;
+  }
 });
 
 document.addEventListener("click", async (event) => {
   const add = event.target.closest("[data-add-entry]");
   if (add) addProfileEntry(add.dataset.addEntry);
+
   const remove = event.target.closest("[data-remove-entry]");
   if (remove) remove.closest("[data-profile-entry]").remove();
+
   if (event.target.closest("#start-chat")) $("#chat-input").focus();
+
   const navigation = event.target.closest("[data-view], [data-go]");
   if (navigation) showView(navigation.dataset.view || navigation.dataset.go);
+
   const jobButton = event.target.closest("[data-resume-job]");
   if (jobButton) await createResume(jobButton, { job: state.jobs[Number(jobButton.dataset.resumeJob)] });
+
   const resumeButton = event.target.closest("[data-open-resume]");
   if (resumeButton) await pending(resumeButton, "در حال باز کردن…", async () => {
     const data = await api(`/api/resumes/${encodeURIComponent(resumeButton.dataset.openResume)}`);
@@ -543,25 +802,44 @@ $("#chat-form").addEventListener("submit", async (event) => {
   if (!message || !state.configured) return;
   const version = sessionVersion;
   $("#chat-empty")?.remove();
-  const row = appendMessage({ role: "user", content: message });
-  row.classList.add("pending");
+
+  const userRow = appendMessage({ role: "user", content: message });
+  userRow.classList.add("pending");
   input.disabled = true;
+
+  // Thinking indicator row
+  const thinkingRow = element("div", "message assistant pending");
+  const thinkingBody = element("div", "message-body");
+  thinkingBody.innerHTML = 'ایجنت در حال تحلیل پرونده شغلی است <span class="thinking-dots" aria-hidden="true"><span></span><span></span><span></span></span>';
+  thinkingRow.append(element("div", "message-label", "دستیار کاریابی"), thinkingBody);
+  $("#messages").append(thinkingRow);
+  $("#messages").scrollTop = $("#messages").scrollHeight;
+
   $("#chat-status").textContent = "در حال دریافت پاسخ…";
   await pending($("#chat-submit"), "در حال ارسال…", async () => {
     const data = await api("/api/chat", { method: "POST", body: { message } });
-    row.classList.remove("pending");
+    userRow.classList.remove("pending");
+    thinkingRow.remove();
     state.messages.push({ role: "user", content: message }, { role: "assistant", content: data.reply });
     input.value = "";
     if (data.profile) { state.profile = data.profile; renderDossier(); }
-    if (data.jobs) { state.jobs = data.jobs; state.search = data.search || {jobs:data.jobs,sources:data.source_status}; state.matches = []; renderJobs(); renderSources(data.source_status); }
+    if (data.jobs) {
+      state.jobs = data.jobs;
+      state.search = data.search || { jobs: data.jobs, sources: data.source_status };
+      state.matches = [];
+      renderJobs();
+      renderSources(data.source_status);
+    }
     renderMessages();
     if (data.resume) rememberResume(data.resume);
     renderUsage(data.usage);
   });
+
   if (version !== sessionVersion) return;
-  if (row.classList.contains("pending")) row.remove();
+  thinkingRow.remove();
+  if (userRow.classList.contains("pending")) userRow.remove();
   input.disabled = false;
-  $("#chat-status").textContent = "هر ارسال حداکثر ۳ درخواست هوش مصنوعی مصرف می‌کند.";
+  $("#chat-status").textContent = "پاسخ‌ها ذخیره می‌شوند.";
   input.focus();
 });
 
@@ -579,9 +857,20 @@ $("#profile-form").addEventListener("submit", async (event) => {
 $("#search-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const sources = [...document.querySelectorAll("#source-filters input:checked")].map((input) => input.value);
-  if (!sources.length) { notify("حداقل یک منبع را برای جست‌وجو انتخاب کنید.", true); return; }
+  if (!sources.length) {
+    notify("حداقل یک منبع را برای جست‌وجو انتخاب کنید.", true);
+    return;
+  }
   await pending($("#search-submit"), "در حال جست‌وجو…", async () => {
-    const data = await api("/api/jobs/search", { method: "POST", body: { query: $("#job-query").value.trim(), city: $("#job-city").value.trim(), remote: $("#job-remote").checked, sources } });
+    const data = await api("/api/jobs/search", {
+      method: "POST",
+      body: {
+        query: $("#job-query").value.trim(),
+        city: $("#job-city").value.trim(),
+        remote: $("#job-remote").checked,
+        sources
+      }
+    });
     state.jobs = data.jobs || [];
     state.search = data;
     state.matches = [];
@@ -592,8 +881,10 @@ $("#search-form").addEventListener("submit", async (event) => {
 });
 
 $("#match-jobs").addEventListener("click", () => pending($("#match-jobs"), "در حال مقایسه…", async () => {
-  // The API bounds one comparison to 12 jobs to keep each model request small.
-  const data = await api("/api/jobs/match", { method: "POST", body: { jobs: state.jobs.slice(0, 12) } });
+  const data = await api("/api/jobs/match", {
+    method: "POST",
+    body: { jobs: state.jobs.slice(0, 12) }
+  });
   state.matches = data.matches || [];
   renderUsage(data.usage);
   renderJobs();
@@ -611,7 +902,10 @@ $("#resume-preview").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.target;
   await pending(form.querySelector("button"), "در حال اصلاح…", async () => {
-    const data = await api(`/api/resumes/${encodeURIComponent(state.selectedResume.id)}/refine`, { method: "POST", body: { feedback: form.elements.feedback.value.trim() } });
+    const data = await api(`/api/resumes/${encodeURIComponent(state.selectedResume.id)}/refine`, {
+      method: "POST",
+      body: { feedback: form.elements.feedback.value.trim() }
+    });
     renderUsage(data.usage);
     rememberResume(data.resume);
     notify("رزومه اصلاح و ذخیره شد.");
@@ -630,4 +924,5 @@ async function boot() {
     if (error.status !== 401) notify(error.message, true);
   }
 }
+
 boot();

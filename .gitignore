@@ -5,3 +5,5 @@ __pycache__/
 data/
 output/
 .pytest_cache/
+env/
+venv/

@@ -3,38 +3,444 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#F4F7FB">
-  <title>HireLoop | پرونده مسیر شغلی</title>
+  <meta name="theme-color" content="#004E72">
+  <title>HireLoop | دستیار هوشمند کاریابی و رزومه کارآموز و جونیور فرانت‌اند</title>
   <link rel="stylesheet" href="/static/styles.css">
   <script src="/static/app.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">رفتن به محتوای اصلی</a>
+  
+  <!-- Global Status Notice Toast -->
   <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
-  <div id="boot" class="boot">در حال باز کردن پرونده…</div>
+  
+  <!-- Boot Loading State -->
+  <div id="boot" class="boot">در حال باز کردن پرونده شغلی شما…</div>
 
-  <section id="auth-view" class="auth-layout" hidden aria-label="ورود به HireLoop">
+  <!-- 1. LANDING & AUTHENTICATION VIEW -->
+  <section id="auth-view" class="auth-layout" hidden aria-label="ورود و عضویت در HireLoop">
     <div class="auth-story">
-      <a class="brand" href="/" aria-label="HireLoop"><span class="brand-mark" aria-hidden="true">h<span>l</span></span><span dir="ltr">HireLoop</span></a>
-      <div class="story-copy"><span class="eyebrow">از تجربه شما، تا رزومه شما</span><h1>مسیر بعدی کارتان<br>از همین‌جا شروع می‌شود.</h1><p>درباره تجربه و مهارت‌هایتان گفت‌وگو کنید، فرصت‌های شغلی را ببینید و برای شغل منتخب یک رزومه دقیق بسازید.</p></div>
-      <div class="story-document" aria-label="مراحل ساخت پرونده شغلی"><div class="document-tab">پرونده شغلی شما</div><div class="document-step"><span class="step-dot" aria-hidden="true"></span><div><strong>تجربه‌هایی که دارید</strong><p>مهارت‌ها، پروژه‌ها و سابقه واقعی شما</p></div></div><div class="document-step"><span class="step-dot" aria-hidden="true"></span><div><strong>فرصت‌هایی که پیدا می‌کنید</strong><p>آگهی‌ها همراه با پیوند و وضعیت منبع</p></div></div><div class="document-step"><span class="step-dot" aria-hidden="true"></span><div><strong>رزومه‌ای که تأیید می‌کنید</strong><p>قابل ویرایش و آماده ذخیره به PDF</p></div></div></div>
-      <p class="story-foot">اطلاعات شما در حساب خودتان ذخیره می‌شود.</p>
+      <div>
+        <div class="story-header">
+          <a class="brand" href="/" aria-label="صفحه اصلی HireLoop">
+            <span class="brand-mark" aria-hidden="true">h<span>l</span></span>
+            <span dir="ltr">HireLoop</span>
+          </a>
+          <span class="buildx-badge">پروژه buildX</span>
+        </div>
+
+        <div class="story-copy">
+          <span class="eyebrow">دستیار ایجنتیک کاریابی و رزومه</span>
+          <h1>مسیر شغلی شما در فرانت‌اند<br>از گفت‌وگو تا استخدام.</h1>
+          <p>
+            با ایجنت هوشمند درباره تجارب و توانمندی‌هایتان گفت‌وگو کنید، فرصت‌های شغلی معتبر بازار ایران را بسنجید، و برای شغل دلخواهتان رزومه‌ای دقیق و صادقانه بسازید.
+          </p>
+        </div>
+
+        <div class="story-document" aria-label="مراحل گام به گام ساخت پرونده شغلی">
+          <div class="document-tab">مسیر مستقیم موفقیت</div>
+          <div class="document-step">
+            <span class="step-dot" aria-hidden="true"></span>
+            <div>
+              <strong>۱. مصاحبه و استخراج مهارت‌ها</strong>
+              <p>گفت‌وگوی تطبیقی برای ثبت مهارت‌ها، ابزارها و پروژه‌های واقعی</p>
+            </div>
+          </div>
+          <div class="document-step">
+            <span class="step-dot" aria-hidden="true"></span>
+            <div>
+              <strong>۲. سنجش و انطباق آگهی‌ها</strong>
+              <p>جست‌وجو در جابینجا، کوئرا و ایران‌تلنت با تحلیل شواهد و درصد تناسب</p>
+            </div>
+          </div>
+          <div class="document-step">
+            <span class="step-dot" aria-hidden="true"></span>
+            <div>
+              <strong>۳. رزومه هدفمند و چاپ PDF</strong>
+              <p>چینش اختصاصی مهارت‌ها برای آگهی منتخب بدون ساختن سوابق جعلی</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="story-foot">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        اطلاعات و سوابق تنها در حساب شخصی شما ذخیره می‌شوند.
+      </p>
     </div>
-    <div class="auth-panel"><div class="auth-card"><span class="eyebrow">پرونده شخصی</span><h2 id="auth-heading">خوش برگشتید.</h2><p id="auth-description" class="muted">برای ادامه مسیر، وارد حساب خود شوید.</p><div class="auth-tabs" role="group" aria-label="نوع ورود"><button id="login-tab" class="active" type="button" aria-pressed="true">ورود</button><button id="register-tab" type="button" aria-pressed="false">ساخت حساب</button></div><form id="auth-form"><label id="name-field" hidden>نام شما<input id="auth-name" name="name" autocomplete="name" maxlength="100"></label><label>ایمیل<input id="auth-email" name="email" type="email" dir="ltr" autocomplete="email" required maxlength="200" placeholder="you@example.com"></label><label>رمز عبور<input id="auth-password" name="password" type="password" dir="ltr" autocomplete="current-password" required maxlength="128"></label><p id="auth-error" class="form-error" role="alert" hidden></p><button id="auth-submit" class="button primary wide" type="submit">ورود به پرونده</button></form><p class="auth-note">رزومه از اطلاعاتی ساخته می‌شود که خودتان تأیید کرده‌اید.</p></div></div>
+
+    <div class="auth-panel">
+      <div class="auth-card">
+        <span class="eyebrow">حساب کاربری کارآموز / جونیور</span>
+        <h2 id="auth-heading">خوش برگشتید.</h2>
+        <p id="auth-description" class="muted">برای ادامه مسیر شغلی، وارد حساب خود شوید.</p>
+
+        <div class="auth-tabs" role="group" aria-label="نوع ورود یا ساخت حساب">
+          <button id="login-tab" class="active" type="button" aria-pressed="true">ورود</button>
+          <button id="register-tab" type="button" aria-pressed="false">ساخت حساب</button>
+        </div>
+
+        <form id="auth-form" novalidate>
+          <label id="name-field" hidden>
+            نام و نام خانوادگی
+            <input id="auth-name" name="name" autocomplete="name" maxlength="100" placeholder="مثلاً: علی رضایی">
+          </label>
+          <label>
+            ایمیل
+            <input id="auth-email" name="email" type="email" dir="ltr" autocomplete="email" required maxlength="200" placeholder="name@example.com">
+          </label>
+          <label>
+            رمز عبور
+            <input id="auth-password" name="password" type="password" dir="ltr" autocomplete="current-password" required maxlength="128" placeholder="حداقل ۸ کاراکتر">
+          </label>
+          <p id="auth-error" class="form-error" role="alert" hidden></p>
+          <button id="auth-submit" class="button primary wide" type="submit">ورود به پرونده</button>
+        </form>
+
+        <p class="auth-note">رزومه و آگهی‌ها فقط بر اساس داده‌های تأییدشدهٔ شما شکل می‌گیرند.</p>
+      </div>
+    </div>
   </section>
 
+  <!-- 2. MAIN WORKSPACE -->
   <div id="workspace" class="workspace" hidden>
-    <aside class="sidebar"><a class="brand" href="/"><span class="brand-mark" aria-hidden="true">h<span>l</span></span><span dir="ltr">HireLoop</span></a><div class="sidebar-caption">مسیر شغلی من</div><nav aria-label="بخش‌های پرونده"><button type="button" class="nav-item active" data-view="interview" aria-current="page"><span aria-hidden="true">◌</span>گفت‌وگو</button><button type="button" class="nav-item" data-view="jobs"><span aria-hidden="true">⌕</span>فرصت‌های شغلی</button><button type="button" class="nav-item" data-view="resumes"><span aria-hidden="true">▤</span>رزومه‌ها</button><button type="button" class="nav-item" data-view="profile"><span aria-hidden="true">◎</span>اطلاعات من</button></nav><div class="sidebar-bottom"><div id="account-name" class="account-name"></div><p id="usage" class="usage"></p><button id="logout" type="button" class="text-button">خروج از حساب</button></div></aside>
-    <div class="workspace-body"><header class="topbar"><div><span class="eyebrow">پرونده مسیر شغلی</span><h1 id="page-title">گفت‌وگو درباره تجربه شما</h1></div><span class="private-badge">فقط در حساب شما</span></header><div id="config-banner" class="config-banner" hidden role="status">گفت‌وگو و ساخت رزومه هنوز فعال نیست. تنظیمات سرویس هوش مصنوعی باید روی سرور تکمیل شود. می‌توانید اطلاعات خود را ثبت و آگهی‌ها را جست‌وجو کنید.</div>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="HireLoop">
+        <span class="brand-mark" aria-hidden="true">h<span>l</span></span>
+        <span dir="ltr">HireLoop</span>
+      </a>
+      
+      <div class="sidebar-caption">مسیر شغلی من</div>
+      
+      <nav aria-label="بخش‌های پرونده کاریابی">
+        <button type="button" class="nav-item active" data-view="interview" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          گفت‌وگو
+        </button>
+        <button type="button" class="nav-item" data-view="jobs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          فرصت‌های شغلی
+        </button>
+        <button type="button" class="nav-item" data-view="resumes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+          رزومه‌ها
+        </button>
+        <button type="button" class="nav-item" data-view="profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          اطلاعات من
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div id="account-name" class="account-name"></div>
+        <p id="usage" class="usage"></p>
+        <button id="logout" type="button" class="text-button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+          خروج از حساب
+        </button>
+      </div>
+    </aside>
+
+    <!-- Workspace Body -->
+    <div class="workspace-body">
+      <!-- Sticky Stepper Navigation on Flow Pages -->
+      <div class="stepper-container" aria-label="مراحل ساخت رزومه و کاریابی">
+        <div class="stepper">
+          <button type="button" class="step-item active" data-step="interview" data-go="interview">
+            <span class="step-number">۱</span>
+            <span class="step-label">مصاحبه و شناخت</span>
+          </button>
+          <div class="step-divider" aria-hidden="true"></div>
+          <button type="button" class="step-item" data-step="jobs" data-go="jobs">
+            <span class="step-number">۲</span>
+            <span class="step-label">فرصت‌های شغلی</span>
+          </button>
+          <div class="step-divider" aria-hidden="true"></div>
+          <button type="button" class="step-item" data-step="resumes" data-go="resumes">
+            <span class="step-number">۳</span>
+            <span class="step-label">رزومه هدفمند</span>
+          </button>
+          <div class="step-divider" aria-hidden="true"></div>
+          <button type="button" class="step-item" data-step="profile" data-go="profile">
+            <span class="step-number">۴</span>
+            <span class="step-label">تأیید و پرونده</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Topbar Header -->
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">پرونده هوشمند مسیر شغلی</span>
+          <h1 id="page-title">گفت‌وگو درباره تجربه شما</h1>
+        </div>
+        <span class="private-badge">حساب کاربری امن و اختصاصی</span>
+      </header>
+
+      <!-- Configuration Warning Banner -->
+      <div id="config-banner" class="config-banner" hidden role="status">
+        گفت‌وگو و ساخت رزومه هنوز فعال نیست. تنظیمات سرویس هوش مصنوعی باید روی سرور تکمیل شود. می‌توانید اطلاعات خود را ثبت و آگهی‌ها را جست‌وجو کنید.
+      </div>
+
+      <!-- Main Content Area -->
       <main id="main" tabindex="-1">
-        <section id="view-interview" class="view interview-grid"><div class="chat-panel panel"><div class="panel-heading"><div><h2>یک گفت‌وگو، یک پرونده دقیق</h2><p>هرچه از کارتان بگویید، در پرونده کنار گفت‌وگو جمع می‌شود.</p></div><span class="small-tag">قابل ادامه</span></div><div id="messages" class="messages" aria-live="polite" aria-relevant="additions"><div id="chat-empty" class="chat-empty"><div class="empty-symbol" aria-hidden="true">↗</div><h3>از کاری شروع کنیم که بلد هستید.</h3><p>آخرین پروژه یا تجربه کاری‌تان چه بود؟ نقش شما چه بود و چه نتیجه‌ای داشت؟</p><button id="start-chat" type="button" class="text-button">نوشتن اولین پاسخ</button></div></div><form id="chat-form" class="chat-composer"><label for="chat-input" class="sr-only">پیام شما</label><textarea id="chat-input" rows="2" maxlength="4000" placeholder="از تجربه، مهارت یا هدف شغلی‌تان بنویسید…" required></textarea><div class="composer-footer"><span id="chat-status" class="muted" aria-live="polite">پاسخ‌ها ذخیره می‌شوند.</span><button id="chat-submit" class="button primary" type="submit">ارسال پیام <span aria-hidden="true">←</span></button></div></form></div><aside id="dossier" class="dossier panel" aria-label="خلاصه پرونده شغلی"><div class="document-tab">پرونده شما</div><div class="dossier-header"><span class="eyebrow">مبنای رزومه</span><h2 id="dossier-name">نام شما</h2><p id="dossier-location" class="muted">شهر و شیوه کار</p></div><div class="dossier-section"><h3>مهارت‌ها</h3><div id="dossier-skills" class="chips"></div></div><div class="dossier-section"><h3>تجربه و پروژه</h3><div id="dossier-work"></div></div><div class="dossier-section"><h3>خلاصه حرفه‌ای</h3><p id="dossier-summary" class="muted"></p></div><div class="dossier-footer"><span id="profile-status" class="profile-status">نیاز به تأیید شما</span><button type="button" class="button secondary wide" data-go="profile">بررسی و تأیید پروفایل</button><p>پیش از ساخت رزومه، اطلاعات را بررسی کنید.</p></div></aside></section>
 
-        <section id="view-jobs" class="view" hidden><div class="section-intro"><h2>فرصت‌های متناسب با مسیر شما</h2><p>منبع و نوع شواهد هر نتیجه را بررسی کنید. جزئیات نهایی در صفحه اصلی آگهی است.</p></div><form id="search-form" class="panel search-panel"><div class="search-fields"><label class="query-field">عنوان شغل یا مهارت<input id="job-query" required maxlength="120" placeholder="مثلاً توسعه‌دهنده پایتون"></label><label>شهر<input id="job-city" maxlength="100" placeholder="مثلاً تهران"></label><label class="check-label"><input id="job-remote" type="checkbox">دورکاری هم قابل قبول است</label><button id="search-submit" class="button primary" type="submit">جست‌وجوی آگهی</button></div><fieldset class="sources-fieldset"><legend>منابع جست‌وجو</legend><div id="source-filters" class="source-filters"></div></fieldset></form><div id="source-status" class="source-status" aria-live="polite"></div><div id="job-toolbar" class="job-toolbar" hidden><p id="job-count"></p><div><span class="cost-note">مقایسه با هوش مصنوعی یک درخواست مصرف می‌کند.</span><button id="match-jobs" class="button secondary" type="button">مقایسه با پرونده من</button></div></div><div id="job-results" class="job-results"><div class="panel empty-state"><h3>فرصت بعدی را جست‌وجو کنید.</h3><p>عنوان شغل یا یک مهارت را بنویسید و منابع موردنظر را انتخاب کنید.</p></div></div><div class="panel pasted-job"><div><h3>متن یک آگهی را دارید؟</h3><p class="muted">متن آگهی را وارد کنید تا رزومه را برای همان موقعیت آماده کنیم.</p></div><form id="paste-form"><label for="job-text" class="sr-only">متن آگهی شغلی</label><textarea id="job-text" rows="4" maxlength="12000" required placeholder="عنوان، وظایف و مهارت‌های موردنیاز آگهی…"></textarea><button class="button secondary" type="submit" data-ai>ساخت رزومه برای این آگهی</button><span class="cost-note">یک درخواست هوش مصنوعی</span></form></div></section>
+        <!-- VIEW 1: INTERVIEW CHAT & LIVE DOSSIER -->
+        <section id="view-interview" class="view interview-grid">
+          <div class="chat-panel panel">
+            <div class="panel-heading">
+              <div>
+                <h2>مصاحبه تطبیقی با ایجنت کاریابی</h2>
+                <p>درباره مهارت‌ها، تجربیات و پروژه‌هایتان بگویید؛ اطلاعات هم‌زمان در پرونده ثبت می‌شود.</p>
+              </div>
+              <span class="small-tag">گفت‌وگوی زنده</span>
+            </div>
 
-        <section id="view-resumes" class="view" hidden><div class="section-intro"><h2>رزومه‌هایی که ساخته‌اید</h2><p>هر رزومه به یک موقعیت شغلی مرتبط است. متن را بررسی کنید و نسخه نهایی را ذخیره کنید.</p></div><div class="resume-grid"><div id="resume-list" class="resume-list"></div><article id="resume-preview" class="panel resume-preview"><div class="empty-state"><h3>اولین رزومه هنوز ساخته نشده.</h3><p>پرونده را تأیید کنید، سپس در بخش فرصت‌های شغلی یک آگهی انتخاب کنید.</p><button type="button" class="button secondary" data-go="jobs">جست‌وجوی فرصت شغلی</button></div></article></div></section>
+            <!-- Messages Stream -->
+            <div id="messages" class="messages" aria-live="polite" aria-relevant="additions">
+              <div id="chat-empty" class="chat-empty">
+                <div class="empty-symbol" aria-hidden="true">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <h3>از توانمندی‌ها و کارهایی که بلد هستید شروع کنیم.</h3>
+                <p>آخرین پروژه فرانت‌اند یا تجربه کارآموزی‌تان چه بود؟ با چه ابزارهایی کار کردید و خروجی چه بود؟</p>
+                <button id="start-chat" type="button" class="text-button">
+                  نوشتن اولین پاسخ
+                  <span aria-hidden="true">←</span>
+                </button>
+              </div>
+            </div>
 
-        <section id="view-profile" class="view profile-view" hidden><div class="section-intro"><h2>آنچه در رزومه شما نوشته می‌شود</h2><p>اطلاعات را دقیق و واقعی بنویسید. هر پروژه و سابقه را در بخش خودش اضافه کنید.</p></div><form id="profile-form" class="panel profile-form"><div class="form-section"><h3>اطلاعات تماس</h3><div class="form-grid"><label>نام و نام خانوادگی<input name="full_name" autocomplete="name" maxlength="150" required></label><label>ایمیل تماس<input name="email" type="email" dir="ltr" autocomplete="email" maxlength="200"></label><label>شماره تماس<input name="phone" type="tel" dir="ltr" autocomplete="tel" maxlength="40"></label><label>شهر<input name="city" autocomplete="address-level2" maxlength="100"></label></div><label class="check-label"><input name="remote" type="checkbox">برای کار دورکاری آماده‌ام</label></div><div class="form-section"><h3>مهارت‌ها و مسیر کاری</h3><label>مهارت‌ها<span class="field-help">مهارت‌ها را با ویرگول یا خط جدید جدا کنید.</span><textarea name="skills" rows="2" placeholder="Python، SQL، تحلیل داده"></textarea></label><fieldset class="profile-entries"><legend>پروژه‌ها</legend><div id="profile-projects"></div><button type="button" class="button secondary" data-add-entry="projects">افزودن پروژه</button></fieldset><fieldset class="profile-entries"><legend>سوابق کاری</legend><div id="profile-experience"></div><button type="button" class="button secondary" data-add-entry="experience">افزودن سابقه کاری</button></fieldset><div class="form-grid"><label>تحصیلات<span class="field-help">هر مورد در یک خط</span><textarea name="education" rows="3"></textarea></label><label>زبان‌ها<span class="field-help">هر زبان و سطح در یک خط</span><textarea name="languages" rows="3" placeholder="انگلیسی، متوسط"></textarea></label></div><label>خلاصه حرفه‌ای<textarea name="summary" rows="4" maxlength="3000" placeholder="تخصص، تجربه و هدف شغلی شما"></textarea></label></div><div class="profile-actions"><p>این اطلاعات را برای استفاده در رزومه تأیید می‌کنم.</p><button id="profile-submit" class="button primary" type="submit">ذخیره و تأیید پروفایل</button></div></form></section>
-      </main><footer class="workspace-footer"><span dir="ltr">HireLoop</span><span>رزومه بر پایه تجربه واقعی شما</span></footer>
+            <!-- Chat Composer -->
+            <form id="chat-form" class="chat-composer">
+              <label for="chat-input" class="sr-only">پیام شما</label>
+              <textarea id="chat-input" rows="2" maxlength="4000" placeholder="از سابقه، ابزارها، کتابخانه‌ها یا پروژه‌های فرانت‌اندتان بنویسید…" required></textarea>
+              <div class="composer-footer">
+                <span id="chat-status" class="muted" aria-live="polite">پاسخ‌ها به صورت خودکار ذخیره می‌شوند.</span>
+                <button id="chat-submit" class="button brand-solid" type="submit">
+                  ارسال پیام
+                  <span aria-hidden="true">←</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Live Dossier Panel -->
+          <aside id="dossier" class="dossier panel" aria-label="خلاصه پرونده شغلی">
+            <div class="dossier-header">
+              <span class="eyebrow">مبنای ساخت رزومه</span>
+              <h2 id="dossier-name">نام شما</h2>
+              <p id="dossier-location" class="muted">شهر و شیوه کار</p>
+              
+              <div class="dossier-progress" aria-label="میزان تکمیل پرونده">
+                <div class="progress-track">
+                  <div id="dossier-progress-bar" class="progress-bar" style="width: 25%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="dossier-section">
+              <h3>مهارت‌های شناسایی‌شده</h3>
+              <div id="dossier-skills" class="chips"></div>
+            </div>
+
+            <div class="dossier-section">
+              <h3>پروژه‌ها و تجربیات کاری</h3>
+              <div id="dossier-work"></div>
+            </div>
+
+            <div class="dossier-section">
+              <h3>خلاصه حرفه‌ای</h3>
+              <p id="dossier-summary" class="muted"></p>
+            </div>
+
+            <div class="dossier-footer">
+              <span id="profile-status" class="profile-status">نیاز به تأیید شما</span>
+              <!-- This is the single primary CTA on interview view when confirmation is needed -->
+              <button type="button" class="button primary wide" data-go="profile">بررسی و تأیید پروفایل</button>
+              <p>پیش از ساخت رزومه برای هر آگهی، اطلاعات را یک‌بار بررسی و نهایی کنید.</p>
+            </div>
+          </aside>
+        </section>
+
+        <!-- VIEW 2: JOBS SEARCH & FIT MATCHING -->
+        <section id="view-jobs" class="view" hidden>
+          <div class="section-intro">
+            <h2>فرصت‌های شغلی متناسب با مهارت‌های شما</h2>
+            <p>آگهی‌ها از سایت‌های معتبر استخراج شده‌اند. شواهد تناسب و فاصله‌های مهارتی را بسنجید.</p>
+          </div>
+
+          <form id="search-form" class="panel search-panel">
+            <div class="search-fields">
+              <label class="query-field">
+                عنوان شغل یا مهارت
+                <input id="job-query" required maxlength="120" placeholder="مثلاً: جونیور React یا توسعه‌دهنده فرانت‌اند">
+              </label>
+              <label>
+                شهر
+                <input id="job-city" maxlength="100" placeholder="مثلاً: تهران، اصفهان">
+              </label>
+              <label class="check-label">
+                <input id="job-remote" type="checkbox">
+                دورکاری هم قابل قبول است
+              </label>
+              <button id="search-submit" class="button secondary" type="submit">جست‌وجوی آگهی</button>
+            </div>
+
+            <fieldset class="sources-fieldset">
+              <legend>منابع کاریابی مورد بررسی</legend>
+              <div id="source-filters" class="source-filters"></div>
+            </fieldset>
+          </form>
+
+          <div id="source-status" class="source-status" aria-live="polite"></div>
+
+          <div id="job-toolbar" class="job-toolbar" hidden>
+            <p id="job-count"></p>
+            <div>
+              <span class="cost-note">مقایسه با هوش مصنوعی یک درخواست مصرف می‌کند.</span>
+              <button id="match-jobs" class="button secondary" type="button">مقایسه و سنجش تناسب با پرونده من</button>
+            </div>
+          </div>
+
+          <!-- Job Cards List -->
+          <div id="job-results" class="job-results">
+            <div class="panel empty-state">
+              <h3>فرصت‌های متناسب را جست‌وجو کنید.</h3>
+              <p>یک عنوان یا مهارت مانند React، فرانت‌اند یا HTML/CSS را بنویسید و منابع را انتخاب کنید.</p>
+            </div>
+          </div>
+
+          <!-- Paste Job Section -->
+          <div class="panel pasted-job">
+            <div>
+              <span class="eyebrow">آگهی دلخواه</span>
+              <h3>متن آگهی شغلی دیگری را دارید؟</h3>
+              <p class="muted">می‌توانید شرح وظایف یا نیازمندی‌های هر آگهی را اینجا قرار دهید تا رزومه متناسب با همان ساخته شود.</p>
+            </div>
+            <form id="paste-form">
+              <label for="job-text" class="sr-only">متن آگهی شغلی</label>
+              <textarea id="job-text" rows="4" maxlength="12000" required placeholder="عنوان، شرایط و مهارت‌های ذکرشده در آگهی…"></textarea>
+              <button class="button secondary" type="submit" data-ai>ساخت رزومه برای این آگهی</button>
+              <span class="cost-note">مصرف یک درخواست هوش مصنوعی</span>
+            </form>
+          </div>
+        </section>
+
+        <!-- VIEW 3: RESUMES & REFINE -->
+        <section id="view-resumes" class="view" hidden>
+          <div class="section-intro">
+            <h2>رزومه‌های اختصاصی شما</h2>
+            <p>هر رزومه بر اساس مهارت‌های تأییدشدهٔ شما و شرایط یک آگهی بهینه‌سازی شده است.</p>
+          </div>
+
+          <div class="resume-grid">
+            <div id="resume-list" class="resume-list"></div>
+
+            <article id="resume-preview" class="panel resume-preview">
+              <div class="empty-state">
+                <h3>هنوز رزومه‌ای ساخته نشده است.</h3>
+                <p>ابتدا اطلاعات پرونده را تأیید کنید، سپس در بخش فرصت‌های شغلی یک آگهی انتخاب نمایید.</p>
+                <button type="button" class="button primary" data-go="jobs">دیدن آگهی‌های مناسب</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- VIEW 4: PROFILE DATA & MANUAL EDITING -->
+        <section id="view-profile" class="view profile-view" hidden>
+          <div class="section-intro">
+            <h2>آنچه در رزومه و جست‌وجوی شما قرار می‌گیرد</h2>
+            <p>اطلاعات واقعی‌تان را وارد یا ویرایش کنید. رزومه فقط بر اساس همین داده‌ها ساخته می‌شود.</p>
+          </div>
+
+          <form id="profile-form" class="panel profile-form">
+            <div class="form-section">
+              <h3>اطلاعات فردی و ارتباطی</h3>
+              <div class="form-grid">
+                <label>
+                  نام و نام خانوادگی
+                  <input name="full_name" autocomplete="name" maxlength="150" required placeholder="مثلاً: سارا نوری">
+                </label>
+                <label>
+                  ایمیل تماس
+                  <input name="email" type="email" dir="ltr" autocomplete="email" maxlength="200" placeholder="sara@example.com">
+                </label>
+                <label>
+                  شماره تماس
+                  <input name="phone" type="tel" dir="ltr" autocomplete="tel" maxlength="40" placeholder="۰۹۱۲۳۴۵۶۷۸۹">
+                </label>
+                <label>
+                  شهر محل سکونت
+                  <input name="city" autocomplete="address-level2" maxlength="100" placeholder="تهران، اصفهان، مشهد…">
+                </label>
+              </div>
+              <label class="check-label">
+                <input name="remote" type="checkbox">
+                برای کارآموزی یا موقعیت‌های دورکاری آماده‌ام
+              </label>
+            </div>
+
+            <div class="form-section">
+              <h3>مهارت‌ها و سوابق فرانت‌اند</h3>
+              <label>
+                مهارت‌ها و فناوری‌ها
+                <span class="field-help">مهارت‌ها را با ویرگول یا خط جدید جدا کنید (مثلاً: HTML، CSS، JavaScript، React، Git).</span>
+                <textarea name="skills" rows="2" placeholder="React, JavaScript, Tailwind, Git, TypeScript"></textarea>
+              </label>
+
+              <fieldset class="profile-entries">
+                <legend>پروژه‌های انجام‌شده</legend>
+                <div id="profile-projects"></div>
+                <button type="button" class="button secondary" data-add-entry="projects">
+                  + افزودن پروژه جدید
+                </button>
+              </fieldset>
+
+              <fieldset class="profile-entries">
+                <legend>سوابق کاری یا کارآموزی</legend>
+                <div id="profile-experience"></div>
+                <button type="button" class="button secondary" data-add-entry="experience">
+                  + افزودن سابقه کاری یا کارآموزی
+                </button>
+              </fieldset>
+
+              <div class="form-grid">
+                <label>
+                  تحصیلات
+                  <span class="field-help">رشته و دانشگاه؛ هر مورد در یک خط</span>
+                  <textarea name="education" rows="3" placeholder="کارشناسی مهندسی کامپیوتر - دانشگاه تهران"></textarea>
+                </label>
+                <label>
+                  زبان‌ها
+                  <span class="field-help">زبان و سطح تسلط؛ هر مورد در یک خط</span>
+                  <textarea name="languages" rows="3" placeholder="فارسی، مادری&#10;انگلیسی، متوسط رو به بالا"></textarea>
+                </label>
+              </div>
+
+              <label>
+                خلاصه حرفه‌ای
+                <span class="field-help">توضیح کوتاه درباره علاقه، تخصص و اهداف شغلی شما</span>
+                <textarea name="summary" rows="4" maxlength="3000" placeholder="جونیور فرانت‌اند علاقه‌مند به توسعه رابط‌های کاربری تمیز و تعاملی با React و Tailwind CSS…"></textarea>
+              </label>
+            </div>
+
+            <div class="profile-actions">
+              <p>این اطلاعات به عنوان مبنای واقعی و معتبر رزومه‌های شما ذخیره می‌شوند.</p>
+              <!-- Single Primary CTA on Profile Form -->
+              <button id="profile-submit" class="button primary" type="submit">ذخیره و تأیید پروفایل</button>
+            </div>
+          </form>
+        </section>
+
+      </main>
+
+      <!-- Workspace Footer -->
+      <footer class="workspace-footer">
+        <span dir="ltr">HireLoop · buildX Edition</span>
+        <span>دستیار هوشمند شغلی بر پایه تجربه و مهارت‌های واقعی شما</span>
+      </footer>
     </div>
   </div>
 </body>
