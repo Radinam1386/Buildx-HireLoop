@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { api } from '../api'
+import { api, fa } from '../api'
 import { useApp } from '../ctx'
-import { ErrorBox, Skeleton, Spinner } from '../ui'
+import { Empty, ErrorBox, Skeleton, Spinner } from '../ui'
 
 const L = {
   fa: { summary: 'خلاصه', skills: 'مهارت‌ها', exp: 'سابقهٔ کار', proj: 'پروژه‌ها', edu: 'تحصیلات', lang: 'زبان‌ها' },
@@ -31,7 +31,7 @@ function Sheet({ c, lang }) {
   )
 }
 
-export default function Resume() {
+function ResumeEditor() {
   const { jobId } = useParams()
   const [sp, setSp] = useSearchParams()
   const lang = sp.get('lang') === 'en' ? 'en' : 'fa'
@@ -64,6 +64,7 @@ export default function Resume() {
         </div>
         <aside className="side no-print">
           <div className="card" style={{ display: 'grid', gap: '.9rem' }}>
+            <Link to="/app/resume" className="btn btn-ghost">رزومه‌های من</Link>
             <div className="seg" role="group" aria-label="زبان رزومه">
               <button className={lang === 'fa' ? 'on' : ''} onClick={() => setSp({})}>فارسی</button>
               <button className={lang === 'en' ? 'on' : ''} onClick={() => setSp({ lang: 'en' })}>English</button>
@@ -76,4 +77,39 @@ export default function Resume() {
       </div>
     </>
   )
+}
+
+function SavedResumes() {
+  const { refreshKey } = useApp()
+  const [items, setItems] = useState(null)
+  const [err, setErr] = useState('')
+  async function load() {
+    setErr('')
+    try { setItems((await api('/api/resumes')).resumes) }
+    catch (e) { setErr(e.message) }
+  }
+  useEffect(() => { load() }, [refreshKey]) // eslint-disable-line
+  return (
+    <>
+      <div className="page-head">
+        <div><h2>رزومه‌های من</h2><p>نسخه‌های ذخیره‌شده برای آگهی‌ها، آمادهٔ باز کردن و دریافت.</p></div>
+        <Link to="/app/jobs" className="btn btn-ghost">دیدن آگهی‌ها</Link>
+      </div>
+      {err ? <ErrorBox message={err} onRetry={load} /> : !items ? <div className="card"><Skeleton lines={3} /></div>
+        : !items.length ? <Empty title="هنوز رزومه‌ای نساخته‌ای" text="یک آگهی را انتخاب کن تا رزومهٔ متناسب با آن ساخته و اینجا ذخیره شود."><Link to="/app/jobs" className="btn btn-primary">انتخاب آگهی</Link></Empty>
+        : <div className="jobs">{items.map((r) => (
+          <article className="card" key={`${r.job.id}-${r.lang}`}>
+            <h3>{r.job.title}</h3>
+            {r.job.company && <p className="muted">{r.job.company}</p>}
+            <p className="muted">{r.lang === 'en' ? 'انگلیسی' : 'فارسی'} · نسخهٔ {fa(r.version)}</p>
+            <Link className="btn btn-blue" to={`/app/resume/${r.job.id}?lang=${r.lang}`}>باز کردن رزومه</Link>
+          </article>
+        ))}</div>}
+    </>
+  )
+}
+
+export default function Resume() {
+  const { jobId } = useParams()
+  return jobId ? <ResumeEditor /> : <SavedResumes />
 }

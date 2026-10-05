@@ -1,6 +1,9 @@
 """منطق اصلی: پروفایل، matching سه‌لایه، رزومه. (ایجنت‌ها از اینجا ابزار می‌گیرند.)"""
+import asyncio
 import json
+import re
 from datetime import datetime
+from threading import Lock
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -8,8 +11,12 @@ from sqlalchemy.orm import Session
 from . import prompts
 from .config import S
 from .llm import chat_json, cosine, embed
+from .jobs import job_key, level as job_level, norm, search_jobs
 from .models import Job, Match, Profile, Resume, User
 from .schemas import (JobExtract, MatchBatch, ProfileData, ResumeContent, SummaryOut)
+
+# ponytail: one-process upsert lock; a unique canonical-key column is needed before using multiple workers.
+_jobs_lock = Lock()
 
 
 # ---------- پروفایل ----------
@@ -41,9 +48,9 @@ def meets_minimum(p: ProfileData) -> bool:
 
 def completeness(p: ProfileData) -> tuple[int, list[str]]:
     checks = [
-        ("نام", bool(p.name)), ("شهر", bool(p.city)), ("سطح (کارآموز/جونیور)", bool(p.level)),
+        ("نام", bool(p.name)), ("شهر", bool(p.city)), ("سطح تجربه", bool(p.level)),
         ("نقش هدف", bool(p.target_role)), ("ترجیح دورکاری", bool(p.remote_pref)),
-        ("مهارت‌ها (حداقل ۳)", len(p.skills) >= 3),
+        ("مهارت‌ها (حداقل ۲)", len(p.skills) >= 2),
         ("پروژه، سابقه یا تحصیلات", bool(p.projects or p.experience or p.education)),
     ]
     missing = [n for n, ok in checks if not ok]
@@ -54,11 +61,11 @@ def completeness(p: ProfileData) -> tuple[int, list[str]]:
 def job_dict(j: Job) -> dict:
     return {"id": j.id, "title": j.title, "company": j.company, "location": j.location, "remote": j.remote,
             "level": j.level, "skills": j.skills or [], "description": j.description, "url": j.url,
-            "source": j.source}
+            "source": j.source, "needs_review": not j.level or not j.location}
 
 
 def visible_jobs(db: Session, user: User) -> list[Job]:
-    return db.query(Job).filter(or_(Job.owner_id.is_(None), Job.owner_id == user.id)).all()
+    return db.query(Job).filter(Job.source != "sample", or_(Job.owner_id.is_(None), Job.owner_id == user.id)).all()
 
 
 def ensure_embeddings(db: Session, jobs: list[Job]) -> None:
@@ -74,19 +81,29 @@ def ensure_embeddings(db: Session, jobs: list[Job]) -> None:
 
 def hard_filter(p: ProfileData, jobs: list[Job]) -> list[Job]:
     """لایهٔ ۱: فیلتر سخت بدون مدل (سطح، دورکاری/شهر، آگهی‌های ردشده)."""
-    ok = [j for j in jobs if j.level in ("intern", "junior", "") and j.id not in p.excluded_job_ids]
-    strict = ok
+    levels = {j: job_level({"title": j.title, "level": j.level, "text": j.description}) for j in jobs}
+    allowed = {"intern": {"intern"}, "junior": {"intern", "junior", ""}, "mid": {"mid", ""}, "senior": {"senior", ""}}.get(p.level)
+    ok = [j for j in jobs if (allowed is None or levels[j] in allowed) and j.id not in p.excluded_job_ids]
+    role = norm(p.target_role)
+    if re.search(r"developer|programmer|software|برنامه نویس|توسعه دهنده|فرانت|بک اند", role):
+        ok = [j for j in ok if re.search(r"developer|programmer|software (?:engineer|intern)|برنامه نویس|توسعه دهنده|مهندس نرم افزار|front.?end|back.?end|full.?stack|(?:python|پایتون|react)\s+intern|کارآموز.*(?:python|پایتون|react)", norm(j.title))]
+        if "python" in role or "پایتون" in role:
+            ok = [j for j in ok if re.search(r"\bpython\b|پایتون", norm(j.description))]
     if p.remote_pref == "remote":
-        strict = [j for j in ok if j.remote]
+        ok = [j for j in ok if j.remote]
     elif p.remote_pref in ("onsite", "hybrid") and p.city:
-        strict = [j for j in ok if j.remote or p.city in j.location or j.location in p.city]
-    return strict if len(strict) >= 3 else ok  # اگر خیلی کم ماند، فیلتر را شل کن
+        ok = [j for j in ok if norm(p.city) in norm(j.location) and (p.remote_pref == "hybrid" or not j.remote)]
+        if p.remote_pref == "hybrid":
+            ok = [j for j in ok if re.search(r"\bhybrid\b|هیبرید|ترکیبی", norm(j.description))]
+    elif p.remote_pref == "city_or_remote" and p.city:
+        ok = [j for j in ok if j.remote or norm(p.city) in norm(j.location)]
+    return ok
 
 
 def rank(db: Session, p: ProfileData, summary_en: str, jobs: list[Job], k: int) -> list[Job]:
     """لایهٔ ۲: embedding روی خلاصه‌های انگلیسی؛ اگر در دسترس نبود، هم‌پوشانی مهارت‌ها."""
     ensure_embeddings(db, jobs)
-    vec = embed([summary_en]) if summary_en else None
+    vec = embed([summary_en]) if summary_en and all(j.embedding for j in jobs) else None
     if vec and all(j.embedding for j in jobs):
         scored = sorted(jobs, key=lambda j: cosine(vec[0], j.embedding), reverse=True)
     else:
@@ -125,25 +142,50 @@ def score_jobs(db: Session, user: User, prof: Profile, jobs: list[Job]) -> list[
     return saved
 
 
-def run_match(db: Session, user: User) -> list[Match]:
+def run_match(db: Session, user: User) -> dict:
     prof = get_profile(db, user)
     p = ProfileData.model_validate(prof.data)
-    candidates = rank(db, p, profile_summary_en(db, user, prof), hard_filter(p, visible_jobs(db, user)), S.match_top_k)
+    found = asyncio.run(search_jobs(p))
+    search = {k: v for k, v in found.items() if k != "jobs"}
+    if all(s["status"] == "error" for s in found["sources"]):
+        return {"matches": list_matches(db, user), "search": dict(search, stale=True)}
+    current = []
+    with _jobs_lock:
+        existing = {job_key(j.source, j.url): j for j in visible_jobs(db, user) if j.owner_id is None}
+        for data in found["jobs"]:
+            key = data.get("key") or job_key(data["source"], data["url"])
+            j = existing.get(key) or Job(source=data["source"], title=data["title"])
+            changed = j.description != data["description"]
+            for field in ("source", "url", "title", "company", "location", "remote", "level", "skills", "description"):
+                setattr(j, field, data[field])
+            if changed:
+                j.summary_en, j.embedding = "", None
+            db.add(j)
+            existing[key] = j
+            current.append(j)
+        db.commit()
+    current.extend(db.query(Job).filter_by(owner_id=user.id, source="pasted").all())
+    filtered = hard_filter(p, current)
+    summary = profile_summary_en(db, user, prof) if S.embedding_model and filtered and all(j.embedding or j.summary_en for j in filtered) else ""
+    candidates = rank(db, p, summary, filtered, S.match_top_k) if filtered else []
+    if candidates:
+        score_jobs(db, user, prof, candidates)
     keep = {j.id for j in candidates}
     for m in db.query(Match).filter_by(user_id=user.id).all():  # نتایج قبلی که دیگر کاندید نیستند
         if m.job_id not in keep:
             db.delete(m)
     db.commit()
-    return score_jobs(db, user, prof, candidates) if candidates else []
+    return {"matches": list_matches(db, user), "search": search}
 
 
 def list_matches(db: Session, user: User) -> list[dict]:
     prof = get_profile(db, user)
-    excluded = set(ProfileData.model_validate(prof.data).excluded_job_ids)
+    profile = ProfileData.model_validate(prof.data)
     rows = (db.query(Match, Job).join(Job, Job.id == Match.job_id)
             .filter(Match.user_id == user.id).order_by(Match.score.desc()).all())
+    allowed = {j.id for j in hard_filter(profile, [j for _, j in rows])}
     return [{"job": job_dict(j), "score": m.score, "why_fit": m.why_fit, "gaps": m.gaps}
-            for m, j in rows if j.id not in excluded]
+            for m, j in rows if j.id in allowed and j.source != "sample"]
 
 
 def add_pasted_job(db: Session, user: User, text: str) -> Job:

@@ -1,9 +1,4 @@
 """تست دود: کل جریان با LLM جعلی (بدون اینترنت و بدون API key)."""
-import os
-import tempfile
-
-os.environ["DATABASE_URL"] = f"sqlite:///{tempfile.mkdtemp()}/t.db"
-
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app import agents, llm, services  # noqa: E402
@@ -40,8 +35,14 @@ def fake_chat_json(db, user_id, agent, model, system, messages, schema, retries=
 
 
 def test_full_flow(monkeypatch):
+    async def search(_):
+        return {"query": "React", "sources": [{"id": "jobvision", "name": "جاب‌ویژن", "status": "ok", "count": 1}],
+                "jobs": [{"source": "jobvision", "url": "https://jobvision.ir/jobs/321", "title": "Junior React developer",
+                          "company": "Test", "location": "تهران", "remote": True, "level": "junior", "skills": ["React"],
+                          "description": "React frontend development"}]}
     for mod in (services, agents):
         monkeypatch.setattr(mod, "chat_json", fake_chat_json)
+    monkeypatch.setattr(services, "search_jobs", search)
     monkeypatch.setattr(services, "embed", lambda texts: None)  # fallback کلیدواژه‌ای
     with TestClient(app) as c:
         r = c.post("/api/auth/register", json={"email": "a@b.com", "password": "secret1", "name": "سارا"})

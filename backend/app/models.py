@@ -31,12 +31,12 @@ class Job(Base):
     __tablename__ = "jobs"
     id: Mapped[int] = mapped_column(primary_key=True)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
-    source: Mapped[str] = mapped_column(String(20), default="sample")  # sample | pasted
+    source: Mapped[str] = mapped_column(String(20), default="pasted")  # pasted | job board id
     title: Mapped[str] = mapped_column(String(255))
     company: Mapped[str] = mapped_column(String(255), default="")
     location: Mapped[str] = mapped_column(String(255), default="")
     remote: Mapped[bool] = mapped_column(Boolean, default=False)
-    level: Mapped[str] = mapped_column(String(20), default="junior")
+    level: Mapped[str] = mapped_column(String(20), default="")
     skills: Mapped[list] = mapped_column(JSON, default=list)
     description: Mapped[str] = mapped_column(Text, default="")
     summary_en: Mapped[str] = mapped_column(Text, default="")

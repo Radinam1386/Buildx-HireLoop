@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api, fa } from '../api'
 import { Chip, ErrorBox, Skeleton } from '../ui'
 
-const LEVEL = { intern: 'کارآموز', junior: 'جونیور' }
+const LEVEL = { intern: 'کارآموز', junior: 'تازه‌کار', mid: 'میانی', senior: 'ارشد' }
 const REMOTE = { remote: 'دورکاری', hybrid: 'ترکیبی', onsite: 'حضوری', any: 'فرقی ندارد' }
 
 function ProfilePanel({ s, open, onClose }) {
@@ -57,7 +57,7 @@ export default function Interview() {
   useEffect(() => {
     if (started.current) return
     started.current = true
-    api('/api/interview').then((st) => { setS(st); if (!st.messages.length) post('') }).catch((e) => setErr(e.message))
+    api('/api/interview').then((st) => { setS(st); if (!st.ready && !st.messages.length) post('') }).catch((e) => setErr(e.message))
   }, [])
   useEffect(() => { logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' }) }, [s, busy])
 
@@ -74,7 +74,7 @@ export default function Interview() {
   return (
     <>
       <div className="page-head">
-        <div><h2>بیا همدیگر را بشناسیم</h2><p>چند سؤال کوتاه می‌پرسم تا آگهی‌های مناسب‌ات را پیدا کنم.</p></div>
+        <div><h2>پروفایل شغلی تو</h2><p>از شغلی که دنبالش هستی و تجربه‌هایت بگو تا جست‌وجو را بر همان اساس انجام بدهیم.</p></div>
         <button className="btn btn-ghost profile-toggle" onClick={() => setPanel(true)}>پروفایل من · {fa(s.completeness)}٪</button>
       </div>
       <div className="split">

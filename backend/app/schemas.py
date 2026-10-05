@@ -34,7 +34,7 @@ class Proj(Lenient):
 class ProfileData(Lenient):
     name: str = ""
     city: str = ""
-    level: str = ""            # intern | junior
+    level: str = ""            # intern | junior | mid | senior
     target_role: str = ""
     remote_pref: str = ""      # remote | hybrid | onsite | any
     skills: list[str] = Field(default_factory=list)
@@ -73,7 +73,7 @@ class JobExtract(Lenient):
     company: str = ""
     location: str = ""
     remote: bool = False
-    level: str = "junior"
+    level: str = ""
     skills: list[str] = Field(default_factory=list)
     description: str = ""
     summary_en: str = ""

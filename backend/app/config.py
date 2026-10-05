@@ -12,13 +12,13 @@ def _b(v: str, default: bool) -> bool:
 
 
 class Settings:
-    base_url = os.getenv("LLM_BASE_URL", "")
-    api_key = os.getenv("LLM_API_KEY", "")
-    model_interviewer = os.getenv("MODEL_INTERVIEWER", "")
-    model_matcher = os.getenv("MODEL_MATCHER", "")
-    model_writer = os.getenv("MODEL_WRITER", "")
-    model_refiner = os.getenv("MODEL_REFINER", "")
-    model_utility = os.getenv("MODEL_UTILITY", "") or os.getenv("MODEL_INTERVIEWER", "")
+    base_url = os.getenv("LLM_BASE_URL") or os.getenv("HORMOUZ_BASE_URL", "")
+    api_key = os.getenv("LLM_API_KEY") or os.getenv("HORMOUZ_API_KEY", "")
+    model_interviewer = os.getenv("MODEL_INTERVIEWER") or os.getenv("HORMOUZ_MODEL", "")
+    model_matcher = os.getenv("MODEL_MATCHER") or model_interviewer
+    model_writer = os.getenv("MODEL_WRITER") or model_interviewer
+    model_refiner = os.getenv("MODEL_REFINER") or model_interviewer
+    model_utility = os.getenv("MODEL_UTILITY") or model_interviewer
     embedding_model = os.getenv("EMBEDDING_MODEL", "")
     reasoning_effort = os.getenv("REASONING_EFFORT", "").strip()
     json_mode = _b(os.getenv("JSON_MODE", ""), True)

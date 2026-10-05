@@ -1,11 +1,9 @@
-import json
 import re
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from . import agents, services as svc
@@ -17,18 +15,9 @@ from .models import Job, Resume, Usage, User
 from .schemas import (LoginIn, MessageIn, PasteIn, ProfileData, RefineIn, RegisterIn, ResumeIn)
 
 
-def seed():
-    with SessionLocal() as db:
-        if db.query(Job).filter(Job.owner_id.is_(None)).count() == 0:
-            for j in json.loads((Path(__file__).parent / "seed_jobs.json").read_text(encoding="utf-8")):
-                db.add(Job(source="sample", **j))
-            db.commit()
-
-
 @asynccontextmanager
 async def lifespan(_):
     Base.metadata.create_all(engine)
-    seed()
     yield
 
 
@@ -121,8 +110,7 @@ def matches_run(user: User = Depends(current_user), db: Session = Depends(get_db
     p = ProfileData.model_validate(svc.get_profile(db, user).data)
     if not svc.meets_minimum(p):
         raise HTTPException(400, "پروفایل هنوز کامل نیست؛ مصاحبه را ادامه دهید.")
-    svc.run_match(db, user)
-    return {"matches": svc.list_matches(db, user)}
+    return svc.run_match(db, user)
 
 
 @app.get("/api/matches")
@@ -141,6 +129,15 @@ def jobs_paste(body: PasteIn, user: User = Depends(current_user), db: Session = 
 
 
 # ---------- Resume ----------
+@app.get("/api/resumes")
+def resume_list(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    rows = (db.query(Resume, Job).join(Job, Job.id == Resume.job_id)
+            .filter(Resume.user_id == user.id, or_(Job.owner_id.is_(None), Job.owner_id == user.id))
+            .order_by(Resume.updated_at.desc(), Resume.id.desc()).all())
+    return {"resumes": [{"job": svc.job_dict(j), "lang": r.lang, "version": r.version,
+                         "updated_at": r.updated_at.isoformat()} for r, j in rows]}
+
+
 @app.get("/api/resume")
 def resume_get(job_id: int, lang: str = "fa", user: User = Depends(current_user), db: Session = Depends(get_db)):
     _own_job(db, user, job_id)

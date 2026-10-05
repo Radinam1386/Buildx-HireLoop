@@ -74,7 +74,7 @@ export function Stepper({ current, onRefine }) {
           <li key={label} className={`step step-${state}`} aria-current={state === 'now' ? 'step' : undefined}>
             {i === 0 && <Link to="/app/interview">{inner}</Link>}
             {i === 1 && <Link to="/app/jobs">{inner}</Link>}
-            {i === 2 && <span>{inner}</span>}
+            {i === 2 && <Link to="/app/resume">{inner}</Link>}
             {i === 3 && <button type="button" onClick={onRefine}>{inner}</button>}
           </li>
         )

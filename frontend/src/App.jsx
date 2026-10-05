@@ -39,7 +39,7 @@ function RefineDrawer({ open, onClose, jobId, lang, onDone }) {
   return (
     <>
       <div className="scrim" onClick={onClose} />
-      <aside className="drawer" role="dialog" aria-label="بازخورد به ایجنت">
+      <aside className="drawer" role="dialog" aria-label="اصلاح ترجیحات و رزومه">
         <header>
           <h3>بهبود نتیجه</h3>
           <button className="btn-text" onClick={onClose}>بستن</button>
@@ -106,6 +106,7 @@ export default function App() {
         <Route index element={<Navigate to="interview" replace />} />
         <Route path="interview" element={<Interview />} />
         <Route path="jobs" element={<Jobs />} />
+        <Route path="resume" element={<Resume />} />
         <Route path="resume/:jobId" element={<Resume />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -8,14 +8,14 @@ export default function Landing() {
     <>
       <nav className="l-nav">
         <Brand />
-        <Link to="/auth" className="btn btn-ghost">{getToken() ? 'ورود به برنامه' : 'ورود / ثبت‌نام'}</Link>
+        <Link to={home} className="btn btn-ghost">{getToken() ? 'ورود به برنامه' : 'ورود / ثبت‌نام'}</Link>
       </nav>
       <section className="hero">
         <div>
-          <h1>از یک گفتگو تا <span className="hero-highlight">رزومه‌ای که دقیقاً به آگهی می‌خورد</span></h1>
+          <h1>شغل بعدی‌ات را پیدا کن، <span className="hero-highlight">رزومه‌ات را برایش آماده کن</span></h1>
           <p className="lead">
-            HireLoop با چند سؤال تو را می‌شناسد، آگهی‌های مناسب کارآموز و جونیور فرانت‌اند را با دلیل پیشنهاد می‌دهد
-            و برای هر آگهی یک رزومهٔ اختصاصی می‌سازد. هر چه بگویی را هم همان‌جا اصلاح می‌کند.
+            از تجربه‌ها و شغلی که می‌خواهی بگو. HireLoop در سایت‌های کاریابی جست‌وجو می‌کند،
+            دلیل تناسب و کمبودهای هر گزینه را نشان می‌دهد و با اطلاعات واقعی خودت رزومه می‌سازد.
           </p>
           <div className="cta">
             <Link to={home} className="btn btn-primary btn-lg">شروع کن</Link>
@@ -23,15 +23,13 @@ export default function Landing() {
         </div>
         <div className="stack" aria-hidden="true">
           <div className="s-chat">
-            <div className="bubble-a">بیشتر با چه ابزارهایی کار کرده‌ای؟</div>
-            <div className="bubble-u">React و کمی TypeScript. یک پروژهٔ فروشگاهی هم دارم.</div>
+            <div className="bubble-a">دنبال چه شغلی هستی و چه تجربه‌ای داری؟</div>
+            <div className="bubble-u">کارشناس فروش. سه سال با مشتری‌ها و تیم فروش کار کرده‌ام.</div>
           </div>
           <div className="s-fit">
-            <strong>توسعه‌دهندهٔ جونیور React</strong>
-            <div className="meter meter-hi" style={{ margin: '.6rem 0' }}>
-              <div className="meter-bar"><span style={{ width: '86%' }} /></div><strong>۸۶٪</strong>
-            </div>
-            <small>پروژهٔ فروشگاهی‌ات با نیاز تیم هم‌خوان است؛ تست‌نویسی کم است.</small>
+            <strong>بررسی تناسب شغلی</strong>
+            <p>سابقه، مهارت‌ها و شرایط کاری تو در کنار نیازهای آگهی.</p>
+            <small>با توضیح دلیل انتخاب و شرایطی که باید بررسی کنی.</small>
           </div>
           <div className="s-doc">
             <strong>رزومه برای این آگهی</strong>
@@ -44,13 +42,13 @@ export default function Landing() {
           <h2>چهار قدم تا درخواست آماده</h2>
           <ol>
             <li><h3>مصاحبه</h3><p>یک گفتگوی کوتاه فارسی دربارهٔ سوابق و ترجیحاتت.</p></li>
-            <li><h3>آگهی‌های مناسب</h3><p>فقط آگهی‌هایی که می‌خورند، همراه علت تناسب و کمبودها.</p></li>
+            <li><h3>آگهی‌های مناسب</h3><p>جست‌وجوی منابع کاریابی، همراه علت تناسب و کمبودها.</p></li>
             <li><h3>رزومهٔ اختصاصی</h3><p>فارسی یا انگلیسی، فقط با اطلاعات واقعی خودت.</p></li>
             <li><h3>بهبود</h3><p>بگو چه چیزی عوض شود تا جست‌وجو و رزومه اصلاح شوند.</p></li>
           </ol>
         </div>
       </section>
-      <footer className="l-foot">HireLoop · ساخته‌شده برای مسابقهٔ buildX</footer>
+      <footer className="l-foot">HireLoop · جست‌وجوی شغل و رزومه بر اساس تجربه‌های واقعی تو</footer>
     </>
   )
 }
