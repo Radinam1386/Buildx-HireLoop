@@ -18,7 +18,7 @@ def interview_turn(db: Session, user: User, message: str) -> dict:
     history = list(prof.messages or [])
     if message.strip():
         history.append({"role": "user", "content": message.strip()})
-    llm_msgs = history or [{"role": "user", "content": "(شروع گفتگو: خودت را معرفی کن و اولین سؤال را بپرس)"}]
+    llm_msgs = history or [{"role": "user", "content": "(شروع گفتگو: به عنوان همراه تخصصی کاریابی برنامه‌نویسان HireLoop خوش‌آمد بگو و با یک سؤال کوتاه بپرس در چه حوزه و استکی از برنامه‌نویسی کار می‌کند یا دنبال چه شغلی است؛ مانند بک‌اند، فرانت‌اند، فول‌استک، هوش مصنوعی، موبایل یا دواپس؟)"}]
     old = ProfileData.model_validate(prof.data or {})
     system = prompts.INTERVIEWER.format(profile=json.dumps(old.model_dump(exclude={"excluded_job_ids"}), ensure_ascii=False))
     turn = chat_json(db, user.id, "interviewer", S.model_interviewer, system, llm_msgs, InterviewTurn)

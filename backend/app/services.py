@@ -80,15 +80,34 @@ def ensure_embeddings(db: Session, jobs: list[Job]) -> None:
 
 
 def hard_filter(p: ProfileData, jobs: list[Job]) -> list[Job]:
-    """لایهٔ ۱: فیلتر سخت بدون مدل (سطح، دورکاری/شهر، آگهی‌های ردشده)."""
+    """لایهٔ ۱: فیلتر سخت بدون مدل (سطح، دورکاری/شهر، انطباق استک/حوزه و آگهی‌های ردشده)."""
     levels = {j: job_level({"title": j.title, "level": j.level, "text": j.description}) for j in jobs}
     allowed = {"intern": {"intern"}, "junior": {"intern", "junior", ""}, "mid": {"mid", ""}, "senior": {"senior", ""}}.get(p.level)
     ok = [j for j in jobs if (allowed is None or levels[j] in allowed) and j.id not in p.excluded_job_ids]
+
     role = norm(p.target_role)
-    if re.search(r"developer|programmer|software|برنامه نویس|توسعه دهنده|فرانت|بک اند", role):
-        ok = [j for j in ok if re.search(r"developer|programmer|software (?:engineer|intern)|برنامه نویس|توسعه دهنده|مهندس نرم افزار|front.?end|back.?end|full.?stack|(?:python|پایتون|react)\s+intern|کارآموز.*(?:python|پایتون|react)", norm(j.title))]
-        if "python" in role or "پایتون" in role:
-            ok = [j for j in ok if re.search(r"\bpython\b|پایتون", norm(j.description))]
+    if role:
+        is_ai = bool(re.search(r"هوش مصنوعی|یادگیری ماشین|machine learning|deep learning|\bai\b|data scien|علم داده|پردازش تصویر|پردازش زبان|computer vision|\bnlp\b|\bllm\b", role))
+        is_devops = bool(re.search(r"دواپس|دوآپس|devops|زیرساخت|infrastructure|sysadmin|ادمین لینوکس|\bsre\b|cloud", role))
+        is_mobile = bool(re.search(r"موبایل|mobile|فلاتر|flutter|اندروید|android|\bios\b|swift|سویفت|react native", role))
+        is_frontend = bool(re.search(r"فرانت|front.?end|ui developer", role))
+        is_backend = bool(re.search(r"بک اند|back.?end", role))
+
+        if is_ai:
+            ok = [j for j in ok if re.search(r"هوش مصنوعی|یادگیری ماشین|machine learning|deep learning|\bai\b|data|علم داده|پردازش|computer vision|\bnlp\b|\bllm\b|پایتون|python|الگوریتم", norm(j.title + " " + j.description))]
+        elif is_devops:
+            ok = [j for j in ok if re.search(r"devops|دوآپس|دواپس|زیرساخت|infrastructure|sysadmin|لینوکس|linux|cloud|docker|داکر|kubernetes|کوبرنتیز|\bsre\b", norm(j.title + " " + j.description))]
+        elif is_mobile:
+            ok = [j for j in ok if re.search(r"موبایل|mobile|flutter|فلاتر|android|اندروید|ios|swift|سویفت|react native|کاتلین|kotlin", norm(j.title + " " + j.description))]
+        elif is_frontend:
+            ok = [j for j in ok if re.search(r"front.?end|فرانت|ui|web|وب|react|ریکت|vue|ویو|angular|next|javascript|typescript", norm(j.title + " " + j.description))]
+        elif is_backend:
+            ok = [j for j in ok if re.search(r"back.?end|بک اند|سرور|سرویس|python|پایتون|django|fastapi|golang|go|node|java|جاوا|spring|php|laravel|لاراول|\.net|c#|سی شارپ|پایگاه داده|دیتابیس", norm(j.title + " " + j.description))]
+        elif re.search(r"developer|programmer|software|برنامه نویس|توسعه دهنده|مهندس نرم افزار", role):
+            ok = [j for j in ok if re.search(r"developer|programmer|software (?:engineer|intern)?|برنامه نویس|توسعه دهنده|مهندس نرم افزار|front.?end|back.?end|full.?stack|کارآموز|\bintern\b", norm(j.title))]
+            if "python" in role or "پایتون" in role:
+                ok = [j for j in ok if re.search(r"\bpython\b|پایتون", norm(j.description))]
+
     if p.remote_pref == "remote":
         ok = [j for j in ok if j.remote]
     elif p.remote_pref in ("onsite", "hybrid") and p.city:

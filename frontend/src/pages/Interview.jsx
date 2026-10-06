@@ -37,6 +37,15 @@ function ProfilePanel({ s, open, onClose }) {
   )
 }
 
+const TRACK_CHIPS = [
+  'برنامه‌نویس بک‌اند',
+  'برنامه‌نویس فرانت‌اند',
+  'برنامه‌نویس فول‌استک',
+  'مهندس هوش مصنوعی (AI/ML)',
+  'توسعه‌دهنده موبایل',
+  'مهندس دواپس',
+]
+
 export default function Interview() {
   const nav = useNavigate()
   const [s, setS] = useState(null)
@@ -69,12 +78,19 @@ export default function Interview() {
     post(m)
   }
 
+  function sendChip(c) {
+    if (busy) return
+    setText('')
+    setS((st) => ({ ...st, messages: [...st.messages, { role: 'user', content: c }] }))
+    post(c)
+  }
+
   if (!s) return err ? <ErrorBox message={err} onRetry={() => location.reload()} /> : <div className="card"><Skeleton lines={4} height={18} /></div>
 
   return (
     <>
       <div className="page-head">
-        <div><h2>پروفایل شغلی تو</h2><p>از شغلی که دنبالش هستی و تجربه‌هایت بگو تا جست‌وجو را بر همان اساس انجام بدهیم.</p></div>
+        <div><h2>پروفایل شغلی تو</h2><p>از استک فنی، نقش هدف و پروژه‌هایت بگو؛ HireLoop جست‌وجوی آگهی‌ها را بر اساس تخصص برنامه‌نویسی‌ات انجام می‌دهد.</p></div>
         <button className="btn btn-ghost profile-toggle" onClick={() => setPanel(true)}>پروفایل من · {fa(s.completeness)}٪</button>
       </div>
       <div className="split">
@@ -88,6 +104,14 @@ export default function Interview() {
             <div className="ready-bar">
               <span>پروفایلت آماده است. می‌توانی ادامه بدهی یا هنوز چیزی اضافه کنی.</span>
               <button className="btn btn-primary" onClick={() => nav('/app/jobs', { state: { run: true } })}>ادامه به آگهی‌ها</button>
+            </div>
+          )}
+          {!s.profile?.target_role && (
+            <div style={{ padding: '0.6rem 1rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap', borderTop: '1px solid var(--border)' }}>
+              <span className="muted" style={{ fontSize: '.8rem', width: '100%' }}>حوزه یا استک مورد نظرت را انتخاب کن یا در کادر زیر بنویس:</span>
+              {TRACK_CHIPS.map((c) => (
+                <button key={c} type="button" className="chip" onClick={() => sendChip(c)} disabled={busy}>{c}</button>
+              ))}
             </div>
           )}
           <div className="composer">

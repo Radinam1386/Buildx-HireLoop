@@ -178,3 +178,40 @@ def test_saved_resumes_remain_accessible_without_matches_and_are_private():
         assert client.get("/api/resume", params={"job_id": jid, "lang": "en"}, headers=h).json()["content"]["name"] == "Test"
         assert client.get("/api/resumes", headers={"Authorization": "Bearer " + other["token"]}).json()["resumes"] == []
         assert client.get("/api/resumes").status_code == 401
+
+
+def test_all_engineering_stacks_query_generation_and_hard_filtering():
+    # 1. AI / ML
+    p_ai = ProfileData(target_role="مهندس هوش مصنوعی", skills=["PyTorch", "Python"])
+    assert boards.queries(p_ai) == ["هوش مصنوعی"]
+    p_ai_intern = ProfileData(target_role="AI Engineer", skills=["PyTorch"], level="intern")
+    assert boards.queries(p_ai_intern) == ["هوش مصنوعی", "کارآموز هوش مصنوعی"]
+
+    j_ai = Job(id=10, title="AI Engineer (LLM & RAG)", description="Building AI models with PyTorch", level="mid")
+    j_fe = Job(id=11, title="Frontend React Developer", description="Building UI with React and CSS", level="mid")
+    assert [j.id for j in services.hard_filter(p_ai, [j_ai, j_fe])] == [10]
+
+    # 2. DevOps
+    p_devops = ProfileData(target_role="مهندس دوآپس", skills=["Docker", "Kubernetes"])
+    assert boards.queries(p_devops) == ["DevOps"]
+    j_devops = Job(id=20, title="DevOps Engineer", description="Managing Kubernetes clusters and CI/CD", level="mid")
+    assert [j.id for j in services.hard_filter(p_devops, [j_devops, j_fe])] == [20]
+
+    # 3. Mobile
+    p_mobile = ProfileData(target_role="توسعه دهنده موبایل", skills=["Flutter", "Dart"])
+    assert boards.queries(p_mobile) == ["Flutter"]
+    j_mobile = Job(id=30, title="Flutter Developer", description="Mobile cross-platform development", level="mid")
+    assert [j.id for j in services.hard_filter(p_mobile, [j_mobile, j_fe])] == [30]
+
+    # 4. Backend (Go)
+    p_go = ProfileData(target_role="توسعه دهنده بک اند", skills=["Golang", "PostgreSQL"])
+    assert boards.queries(p_go) == ["Golang"]
+    j_go = Job(id=40, title="Golang Backend Developer", description="Microservices with Go and gRPC", level="mid")
+    assert [j.id for j in services.hard_filter(p_go, [j_go, j_fe])] == [40]
+
+    # 5. Full-Stack
+    p_fullstack = ProfileData(target_role="Full Stack Developer", skills=["React", "Node.js"])
+    assert boards.queries(p_fullstack) == ["Full Stack"]
+    j_fs = Job(id=50, title="Full Stack Engineer", description="React frontend and Node backend", level="mid")
+    assert [j.id for j in services.hard_filter(p_fullstack, [j_fs])] == [50]
+

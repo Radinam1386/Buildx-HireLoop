@@ -38,20 +38,44 @@ def job_key(source, url):
         return ""
 
 
+TECH_ALIASES = {
+    # AI & ML
+    "هوش مصنوعی": "هوش مصنوعی", "یادگیری ماشین": "یادگیری ماشین", "machine learning": "Machine Learning",
+    "deep learning": "یادگیری عمیق", "computer vision": "پردازش تصویر", "nlp": "پردازش زبان طبیعی",
+    "علم داده": "علم داده", "data science": "علم داده",
+    # Fullstack
+    "full stack": "Full Stack", "fullstack": "Full Stack", "فول استک": "Full Stack",
+    # DevOps
+    "devops": "DevOps", "دواپس": "DevOps", "دوآپس": "DevOps", "docker": "Docker", "داکر": "Docker",
+    "kubernetes": "Kubernetes", "کوبرنتیز": "Kubernetes",
+    # Mobile
+    "flutter": "Flutter", "فلاتر": "Flutter", "android": "Android", "اندروید": "Android",
+    "ios": "iOS", "react native": "React Native",
+    # Backend
+    "python": "Python", "پایتون": "Python", "django": "Django", "fastapi": "FastAPI",
+    "golang": "Golang", "go": "Golang", "گولنگ": "Golang",
+    "node.js": "Node.js", "nodejs": "Node.js", "node": "Node.js", "nest": "NestJS", "nestjs": "NestJS",
+    "java": "Java", "جاوا": "Java", "spring": "Spring", "spring boot": "Spring Boot",
+    "php": "PHP", "laravel": "Laravel", "لاراول": "Laravel",
+    "c#": "C#", ".net": ".NET", "دات نت": ".NET",
+    # Frontend
+    "react": "React", "ریکت": "React", "ری اکت": "React", "next.js": "Next.js", "next": "Next.js",
+    "vue": "Vue", "angular": "Angular",
+}
+
+
 def queries(profile):
     role = norm(profile.target_role)
     if re.search(r"یادگیری ماشین|هوش مصنوعی|machine learning|computer vision|\bai\b", role):
-        primary = "یادگیری ماشین"
+        primary = "هوش مصنوعی"
     else:
-        aliases = {"python": "Python", "پایتون": "Python", "react": "React", "ریکت": "React", "ری اکت": "React",
-                   "django": "Python", "fastapi": "Python", "node.js": "Node.js", "java": "Java", "php": "PHP", "vue": "Vue", "angular": "Angular", "c#": "C#"}
-        primary = next((value for key, value in aliases.items() if re.search(r"(?<!\w)" + re.escape(key) + r"(?!\w)", role)), "")
-        if not primary and re.search(r"developer|programmer|software|برنامه نویس|توسعه دهنده|فرانت|بک اند", role):
-            primary = next((aliases[norm(s)] for s in profile.skills if norm(s) in aliases), "")
+        primary = next((value for key, value in TECH_ALIASES.items() if re.search(r"(?<!\w)" + re.escape(key) + r"(?!\w)", role)), "")
+        if not primary and re.search(r"developer|programmer|software|برنامه نویس|توسعه دهنده|فرانت|بک اند|full.?stack|devops|دواپس|موبایل", role):
+            primary = next((TECH_ALIASES[norm(s)] for s in profile.skills if norm(s) in TECH_ALIASES), "")
         primary = primary or profile.target_role.strip()
     result = [primary[:120]]
     if profile.level == "intern":
-        result.append("کارآموز " + ("هوش مصنوعی" if primary == "یادگیری ماشین" else primary))
+        result.append("کارآموز " + ("هوش مصنوعی" if primary in ("هوش مصنوعی", "یادگیری ماشین", "Machine Learning") else primary))
     return list(dict.fromkeys(result))[:2]
 
 
