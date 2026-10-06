@@ -131,11 +131,20 @@ def score_jobs(db: Session, user: User, prof: Profile, jobs: list[Job]) -> list[
                     [{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}], MatchBatch)
     valid = {j.id for j in jobs}
     saved = []
+    received = set()
     for r in out.results:
         if r.job_id not in valid:
             continue
+        received.add(r.job_id)
         m = db.query(Match).filter_by(user_id=user.id, job_id=r.job_id).first() or Match(user_id=user.id, job_id=r.job_id)
         m.score, m.why_fit, m.gaps = max(0, min(100, r.score)), r.why_fit[:3], r.gaps[:3]
+        db.add(m)
+        saved.append(m)
+    for j in jobs:
+        if j.id in received:
+            continue
+        m = db.query(Match).filter_by(user_id=user.id, job_id=j.id).first() or Match(user_id=user.id, job_id=j.id)
+        m.score, m.why_fit, m.gaps = 0, [], ["مدل برای این آگهی امتیاز برنگرداند؛ متن منبع را بررسی کن."]
         db.add(m)
         saved.append(m)
     db.commit()
@@ -167,7 +176,7 @@ def run_match(db: Session, user: User) -> dict:
     current.extend(db.query(Job).filter_by(owner_id=user.id, source="pasted").all())
     filtered = hard_filter(p, current)
     summary = profile_summary_en(db, user, prof) if S.embedding_model and filtered and all(j.embedding or j.summary_en for j in filtered) else ""
-    candidates = rank(db, p, summary, filtered, S.match_top_k) if filtered else []
+    candidates = rank(db, p, summary, filtered, len(filtered)) if filtered else []
     if candidates:
         score_jobs(db, user, prof, candidates)
     keep = {j.id for j in candidates}

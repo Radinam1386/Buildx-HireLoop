@@ -5,6 +5,7 @@ import { useApp } from '../ctx'
 import { Chip, Empty, ErrorBox, Meter, Skeleton, Spinner } from '../ui'
 
 const SOURCE_NAMES = { jobinja: 'جابینجا', jobvision: 'جاب‌ویژن', quera: 'کوئرا', irantalent: 'ایران‌تلنت', karboom: 'کاربوم', pasted: 'آگهی واردشده', user_text: 'آگهی واردشده' }
+const PAGE_SIZE = 12
 const realMatches = (items) => (items || []).filter((m) => m.job?.source !== 'sample')
 const sourceName = (id, sources = []) => SOURCE_NAMES[id] || sources.find((s) => s.id === id)?.name || id
 
@@ -55,19 +56,20 @@ export default function Jobs() {
   const [pasteOpen, setPasteOpen] = useState(false)
   const [paste, setPaste] = useState('')
   const [busy, setBusy] = useState(false)
+  const [page, setPage] = useState(1)
 
   const run = useCallback(async () => {
     setRunning(true); setErr('')
     try {
       const result = await api('/api/matches/run', { method: 'POST' })
-      setMatches(realMatches(result.matches)); setSearch(result.search || null)
+      setMatches(realMatches(result.matches)); setSearch(result.search || null); setPage(1)
     }
     catch (e) { setErr(e.message); setMatches((m) => m ?? []) } finally { setRunning(false) }
   }, [])
 
   useEffect(() => {
     if (loc.state?.run) { nav(loc.pathname, { replace: true, state: null }); run(); return }
-    api('/api/matches').then((r) => { setMatches(realMatches(r.matches)); setSearch(r.search || null) }).catch((e) => { setErr(e.message); setMatches([]) })
+    api('/api/matches').then((r) => { setMatches(realMatches(r.matches)); setSearch(r.search || null); setPage(1) }).catch((e) => { setErr(e.message); setMatches([]) })
   }, [refreshKey])  // eslint-disable-line
 
   async function dismiss(id) {
@@ -77,7 +79,7 @@ export default function Jobs() {
   }
   async function addPasted() {
     setBusy(true); setErr('')
-    try { setMatches(realMatches((await api('/api/jobs/paste', { method: 'POST', body: { text: paste } })).matches)); setPaste(''); setPasteOpen(false) }
+    try { setMatches(realMatches((await api('/api/jobs/paste', { method: 'POST', body: { text: paste } })).matches)); setPage(1); setPaste(''); setPasteOpen(false) }
     catch (e) { setErr(e.message) } finally { setBusy(false) }
   }
 
@@ -89,6 +91,9 @@ export default function Jobs() {
   if (!matches) return <div className="jobs">{[0, 1, 2].map((i) => <div key={i} className="card"><Skeleton lines={4} height={16} /></div>)}</div>
 
   const list = matches.filter((m) => !remoteOnly || m.job.remote)
+  const pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const pageItems = list.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
   const sourceErrors = search?.sources?.some((s) => s.status === 'error')
   return (
     <>
@@ -125,9 +130,22 @@ export default function Jobs() {
         </Empty>
       ) : (
         <>
-          <div className="toolbar"><Chip active={!remoteOnly} onClick={() => setRemoteOnly(false)}>همه</Chip><Chip active={remoteOnly} onClick={() => setRemoteOnly(true)}>فقط دورکاری</Chip></div>
-          {list.length === 0 ? <Empty title="آگهی دورکاری‌ای در این فهرست نیست" text="فیلتر را بردار یا ترجیحات جست‌وجو را اصلاح کن."><button className="btn btn-ghost" onClick={() => setRemoteOnly(false)}>نمایش همه</button></Empty> :
-            <div className="jobs">{list.map((m, i) => <JobCard key={m.job.id} m={m} top={i === 0} onNo={dismiss} busy={busy} sources={search?.sources} />)}</div>}
+          <div className="toolbar">
+            <Chip active={!remoteOnly} onClick={() => { setRemoteOnly(false); setPage(1) }}>همه</Chip>
+            <Chip active={remoteOnly} onClick={() => { setRemoteOnly(true); setPage(1) }}>فقط دورکاری</Chip>
+            {list.length > 0 && <span className="muted page-count">نمایش {fa((currentPage - 1) * PAGE_SIZE + 1)} تا {fa(Math.min(currentPage * PAGE_SIZE, list.length))} از {fa(list.length)} آگهی</span>}
+          </div>
+          {list.length === 0 ? <Empty title="آگهی دورکاری‌ای در این فهرست نیست" text="فیلتر را بردار یا ترجیحات جست‌وجو را اصلاح کن."><button className="btn btn-ghost" onClick={() => { setRemoteOnly(false); setPage(1) }}>نمایش همه</button></Empty> :
+            <>
+              <div className="jobs">{pageItems.map((m, i) => <JobCard key={m.job.id} m={m} top={currentPage === 1 && i === 0} onNo={dismiss} busy={busy} sources={search?.sources} />)}</div>
+              {pageCount > 1 && (
+                <nav className="pagination" aria-label="صفحه‌های آگهی">
+                  <button className="btn btn-ghost" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>قبلی</button>
+                  <span className="muted">صفحه {fa(currentPage)} از {fa(pageCount)}</span>
+                  <button className="btn btn-ghost" onClick={() => setPage((p) => Math.min(pageCount, p + 1))} disabled={currentPage === pageCount}>بعدی</button>
+                </nav>
+              )}
+            </>}
         </>
       )}
     </>

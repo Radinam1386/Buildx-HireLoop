@@ -227,7 +227,7 @@ async def search_source(client, semaphore, source, terms, profile):
                 raw = await request(client, semaphore, base + "?" + urlencode(params))
                 candidates = cards(source, raw)
             search_ok = True
-            for candidate in candidates[:20]:
+            for candidate in candidates:
                 key = job_key(source, candidate["url"])
                 if key and candidate.get("open") is not False:
                     found.setdefault(key, candidate)
@@ -238,8 +238,8 @@ async def search_source(client, semaphore, source, terms, profile):
         return (bool(profile.level) and level(card) not in (profile.level, ""),
                 bool(profile.city) and norm(profile.city) not in text and card.get("remote") is not True,
                 -sum(norm(s) in text for s in profile.skills))
-    # ponytail: first-page search and at most 12 detail checks per source; paginate if measured coverage requires it.
-    candidates = sorted(found.values(), key=priority)[:12]
+    # ponytail: first-page search remains bounded by each source and the per-source timeout.
+    candidates = sorted(found.values(), key=priority)
     checked, closed = [], 0
     async def check(card):
         nonlocal closed

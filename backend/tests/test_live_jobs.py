@@ -53,6 +53,60 @@ def test_search_replaces_samples_and_upserts_without_duplicates(monkeypatch):
         assert db.query(Job).filter_by(source="jobvision").count() == 1
 
 
+def test_run_match_scores_all_filtered_jobs(monkeypatch):
+    async def search(p):
+        return {"query": "React", "sources": [{"id": "jobvision", "status": "ok", "count": 25}],
+                "jobs": [{"source": "jobvision", "url": f"https://jobvision.ir/jobs/{1000 + i}", "title": f"React developer {i}",
+                          "company": "Example", "location": "تهران", "remote": True, "level": "junior",
+                          "skills": ["React"], "description": "React frontend development"}
+                         for i in range(25)]}
+
+    def model(db, uid, agent, name, system, messages, schema):
+        if schema is SummaryOut:
+            return SummaryOut(summary_en="Junior React developer")
+        ids = [j["job_id"] for j in json.loads(messages[0]["content"])["jobs"]]
+        return MatchBatch(results=[MatchItem(job_id=i, score=80, why_fit=["React"], gaps=[]) for i in ids])
+
+    monkeypatch.setattr(services, "search_jobs", search, raising=False)
+    monkeypatch.setattr(services, "chat_json", model)
+    monkeypatch.setattr(services, "embed", lambda _: None)
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    with Session(engine) as db:
+        u = User(email="many@example.com", password_hash="unused")
+        db.add(u)
+        db.flush()
+        p = ProfileData(name="Test", target_role="Frontend developer", level="junior", remote_pref="remote", skills=["React", "CSS"])
+        db.add(Profile(user_id=u.id, data=p.model_dump(), messages=[]))
+        db.commit()
+        assert len(services.run_match(db, u)["matches"]) == 25
+
+
+def test_score_jobs_keeps_candidates_when_model_omits_ids(monkeypatch):
+    def model(db, uid, agent, name, system, messages, schema):
+        ids = [j["job_id"] for j in json.loads(messages[0]["content"])["jobs"]]
+        return MatchBatch(results=[MatchItem(job_id=ids[0], score=88, why_fit=["React"], gaps=[])])
+
+    monkeypatch.setattr(services, "chat_json", model)
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    with Session(engine) as db:
+        u = User(email="omitted@example.com", password_hash="unused")
+        db.add(u)
+        db.flush()
+        prof = Profile(user_id=u.id, data=ProfileData(skills=["React"]).model_dump(), messages=[])
+        jobs = [Job(title="React developer", source="jobvision", url=f"https://jobvision.ir/jobs/{i}",
+                    remote=True, level="junior", skills=["React"], description="React frontend")
+                for i in (1, 2)]
+        db.add(prof)
+        db.add_all(jobs)
+        db.commit()
+        services.score_jobs(db, u, prof, jobs)
+        matches = services.list_matches(db, u)
+        assert len(matches) == 2
+        assert sorted(m["score"] for m in matches) == [0, 88]
+
+
 def test_original_page_expiry_overrides_search_cards():
     card = {"url": "https://jobinja.ir/companies/example/jobs/Ab12/title", "title": "Python intern"}
     posting = '<script type="application/ld+json">' + json.dumps({"@type": "JobPosting", "title": "Python intern", "description": "Python and FastAPI", "validThrough": "2099-01-01", "jobLocationType": "TELECOMMUTE"}) + '</script>'

@@ -22,7 +22,6 @@ class Settings:
     embedding_model = os.getenv("EMBEDDING_MODEL", "")
     reasoning_effort = os.getenv("REASONING_EFFORT", "").strip()
     json_mode = _b(os.getenv("JSON_MODE", ""), True)
-    match_top_k = int(os.getenv("MATCH_TOP_K", "8") or 8)
     jwt_secret = os.getenv("JWT_SECRET", "dev-secret-change-me")
     jwt_hours = int(os.getenv("JWT_EXPIRE_HOURS", "72") or 72)
     database_url = os.getenv("DATABASE_URL", "sqlite:///./hireloop.db")

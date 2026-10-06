@@ -1092,10 +1092,24 @@ button.chip:hover {
   margin-bottom: 1.25rem;
 }
 
+.page-count {
+  margin-inline-start: auto;
+  font-size: .9rem;
+}
+
 .jobs {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
   gap: 1.25rem;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: .85rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
 }
 
 .job {
