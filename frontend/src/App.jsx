@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
-import { Navigate, Outlet, Route, Routes, useLocation, useMatch, useNavigate } from 'react-router-dom'
+import { NavLink, Navigate, Outlet, Route, Routes, useLocation, useMatch, useNavigate } from 'react-router-dom'
 import { AppCtx } from './ctx'
 import { api, clearSession, getToken, getUser } from './api'
 import { Brand, Stepper } from './ui'
@@ -8,6 +8,9 @@ import Auth from './pages/Auth'
 import Interview from './pages/Interview'
 import Jobs from './pages/Jobs'
 import Resume from './pages/Resume'
+import JobDetail from './pages/JobDetail'
+import Practice from './pages/Practice'
+import Applications from './pages/Applications'
 
 const CHIPS = [
   'دورکاری می‌خوام',
@@ -90,6 +93,12 @@ function Shell() {
           </div>
         </div>
       </header>
+      <nav className="workspace-nav no-print" aria-label="بخش‌های کاری">
+        <NavLink to="/app/interview">پروفایل</NavLink>
+        <NavLink to="/app/jobs">آگهی‌ها</NavLink>
+        <NavLink to="/app/resume">رزومه‌های من</NavLink>
+        <NavLink to="/app/applications">پیگیری درخواست‌ها</NavLink>
+      </nav>
       <main className="page"><Outlet /></main>
       <RefineDrawer open={refineOpen} onClose={() => setRefineOpen(false)} jobId={resumeMatch ? Number(resumeMatch.params.jobId) : null}
         lang={lang} onDone={() => bump()} />
@@ -106,6 +115,9 @@ export default function App() {
         <Route index element={<Navigate to="interview" replace />} />
         <Route path="interview" element={<Interview />} />
         <Route path="jobs" element={<Jobs />} />
+        <Route path="jobs/:jobId" element={<JobDetail />} />
+        <Route path="practice/:jobId" element={<Practice />} />
+        <Route path="applications" element={<Applications />} />
         <Route path="resume" element={<Resume />} />
         <Route path="resume/:jobId" element={<Resume />} />
       </Route>

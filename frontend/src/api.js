@@ -12,7 +12,7 @@ export const getUser = () => {
   try { return JSON.parse(localStorage.getItem('hl_user')) } catch { return null }
 }
 
-export async function api(path, { method = 'GET', body } = {}) {
+export async function api(path, { method = 'GET', body, download = false } = {}) {
   let res
   try {
     res = await fetch(BASE + path, {
@@ -23,6 +23,7 @@ export async function api(path, { method = 'GET', body } = {}) {
   } catch {
     throw Object.assign(new Error('اتصال به سرور برقرار نشد. اینترنت را بررسی کن و دوباره امتحان کن.'), { status: 0 })
   }
+  if (res.ok && download) return res.blob()
   const data = await res.json().catch(() => null)
   if (!res.ok) {
     if (res.status === 401 && getToken()) { clearSession(); location.href = '/auth' }

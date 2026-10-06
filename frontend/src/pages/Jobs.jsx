@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { api, fa } from '../api'
 import { useApp } from '../ctx'
 import { Chip, Empty, ErrorBox, Meter, Skeleton, Spinner } from '../ui'
+import TrackJob from '../TrackJob'
 
 const SOURCE_NAMES = { jobinja: 'جابینجا', jobvision: 'جاب‌ویژن', quera: 'کوئرا', irantalent: 'ایران‌تلنت', karboom: 'کاربوم', pasted: 'آگهی واردشده', user_text: 'آگهی واردشده' }
 const PAGE_SIZE = 12
@@ -36,10 +37,13 @@ function JobCard({ m, top, onNo, busy, sources }) {
       </div>
       <div style={{ display: 'flex', gap: '.3rem', flexWrap: 'wrap' }}>{(j.skills || []).map((s) => <Chip key={s}>{s}</Chip>)}</div>
       <div className="job-actions">
+        <Link to={`/app/jobs/${j.id}`} className="btn btn-ghost">جزئیات و تحلیل آگهی</Link>
         <Link to={`/app/resume/${j.id}`} className={'btn ' + (top ? 'btn-primary' : 'btn-blue')}>ساخت رزومه برای این آگهی</Link>
+        <Link to={`/app/practice/${j.id}`} className="btn-text">تمرین مصاحبه</Link>
         {url && <a href={url} target="_blank" rel="noopener noreferrer" className="btn-text">مشاهده در سایت منبع ↗</a>}
         <button className="btn-text" onClick={() => onNo(j.id)} disabled={busy}>مناسب من نیست</button>
       </div>
+      <TrackJob jobId={j.id} />
     </article>
   )
 }

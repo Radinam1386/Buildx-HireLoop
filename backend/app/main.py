@@ -7,12 +7,13 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from . import agents, services as svc
+from . import analysis, applications, practice, resume_io
 from .auth import check_pw, current_user, hash_pw, make_token
 from .config import S
 from .db import Base, SessionLocal, engine, get_db
 from .llm import LLMError
 from .models import Job, Resume, Usage, User
-from .schemas import (LoginIn, MessageIn, PasteIn, ProfileData, RefineIn, RegisterIn, ResumeIn)
+from .schemas import (LoginIn, MessageIn, PasteIn, PreparationIn, ProfileData, RefineIn, RegisterIn, ResumeIn, ResumeEditIn)
 
 
 @asynccontextmanager
@@ -23,6 +24,8 @@ async def lifespan(_):
 
 app = FastAPI(title="HireLoop API", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=S.cors, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+for router in (analysis.router, applications.router, practice.router, resume_io.router):
+    app.include_router(router)
 
 
 @app.exception_handler(LLMError)
@@ -40,7 +43,10 @@ def _state(db: Session, user: User) -> dict:
 
 
 def _resume_out(r: Resume, db: Session) -> dict:
-    return {"content": r.content, "version": r.version, "lang": r.lang, "job": svc.job_dict(db.get(Job, r.job_id))}
+    return {"content": {k: v for k, v in r.content.items() if not k.startswith('_') and k != 'evidence'},
+            "evidence": r.content.get('_evidence'),
+            "tailoring": r.content.get('_tailoring'), "version": r.version, "lang": r.lang,
+            "job": svc.job_dict(db.get(Job, r.job_id))}
 
 
 def _own_job(db: Session, user: User, job_id: int) -> Job:
@@ -90,6 +96,20 @@ def interview_state(user: User = Depends(current_user), db: Session = Depends(ge
     return _state(db, user)
 
 
+@app.patch("/api/profile")
+def profile_edit(body: ProfileData, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    if (body.level not in ('', 'intern', 'junior', 'mid', 'senior') or
+            body.remote_pref not in ('', 'any', 'remote', 'onsite', 'hybrid', 'city_or_remote') or
+            len(body.model_dump_json()) > 50000):
+        raise HTTPException(422, "سطح تجربه، نوع همکاری یا حجم اطلاعات معتبر نیست.")
+    prof = svc.get_profile(db, user)
+    patch = body.model_dump(exclude_unset=True, exclude={"excluded_job_ids"})
+    prof.data = {**prof.data, **patch}
+    prof.ready, prof.summary_en = svc.meets_minimum(ProfileData.model_validate(prof.data)), ""
+    db.commit()
+    return _state(db, user)
+
+
 @app.post("/api/interview/message")
 def interview_message(body: MessageIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
     agents.interview_turn(db, user, body.message)
@@ -129,6 +149,17 @@ def jobs_paste(body: PasteIn, user: User = Depends(current_user), db: Session = 
 
 
 # ---------- Resume ----------
+@app.get("/api/resume/preparation")
+def preparation_get(job_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    return svc.resume_preparation(svc.get_profile(db, user), _own_job(db, user, job_id))
+
+
+@app.post("/api/resume/preparation")
+def preparation_save(body: PreparationIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    job = _own_job(db, user, body.job_id)
+    return svc.save_preparation(db, svc.get_profile(db, user), job, body.answers, body.fingerprint)
+
+
 @app.get("/api/resumes")
 def resume_list(user: User = Depends(current_user), db: Session = Depends(get_db)):
     rows = (db.query(Resume, Job).join(Job, Job.id == Resume.job_id)
@@ -149,6 +180,12 @@ def resume_get(job_id: int, lang: str = "fa", user: User = Depends(current_user)
 def resume_make(body: ResumeIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
     job = _own_job(db, user, body.job_id)
     return _resume_out(svc.generate_resume(db, user, job, body.lang, body.instructions), db)
+
+
+@app.patch("/api/resume")
+def resume_edit(body: ResumeEditIn, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    _own_job(db, user, body.job_id)
+    return _resume_out(svc.edit_resume(db, user, body), db)
 
 
 # ---------- Refine ----------

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -92,6 +92,11 @@ class ResumeProj(Lenient):
     bullets: list[str] = Field(default_factory=list)
 
 
+class ResumeEvidence(Lenient):
+    path: str = Field(max_length=160)
+    source_ids: list[str] = Field(default_factory=list, max_length=20)
+
+
 class ResumeContent(Lenient):
     name: str = ""
     headline: str = ""
@@ -102,6 +107,7 @@ class ResumeContent(Lenient):
     projects: list[ResumeProj] = Field(default_factory=list)
     education: list[Edu] = Field(default_factory=list)
     languages: list[str] = Field(default_factory=list)
+    evidence: list[ResumeEvidence] = Field(default_factory=list, max_length=150)
 
 
 class RefineDecision(Lenient):
@@ -129,13 +135,39 @@ class MessageIn(BaseModel):
 
 
 class PasteIn(BaseModel):
-    text: str
+    text: str = Field(min_length=30, max_length=12000)
 
 
 class ResumeIn(BaseModel):
     job_id: int
     lang: str = "fa"
     instructions: str = ""
+
+
+class ResumeEditIn(BaseModel):
+    job_id: int = Field(gt=0)
+    lang: Literal['fa', 'en'] = 'fa'
+    version: int = Field(ge=1)
+    content: ResumeContent
+
+
+class PreparationAnswer(BaseModel):
+    id: str = Field(max_length=180)
+    status: Literal["yes", "no", "skip"] = "skip"
+    answer: str = Field(default="", max_length=2000)
+
+    @model_validator(mode="after")
+    def confirmed_detail(self):
+        self.answer = self.answer.strip()
+        if self.status == "yes" and not self.answer:
+            raise ValueError("برای تأیید تجربه، توضیح کوتاهی بنویس.")
+        return self
+
+
+class PreparationIn(BaseModel):
+    job_id: int = Field(gt=0)
+    fingerprint: str = Field(min_length=64, max_length=64)
+    answers: list[PreparationAnswer] = Field(default_factory=list, max_length=3)
 
 
 class RefineIn(BaseModel):

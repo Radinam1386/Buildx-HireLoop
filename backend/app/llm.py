@@ -58,7 +58,7 @@ def chat_json(db: Session, user_id, agent: str, model: str, system: str,
     global _json_mode
     if not model or "REPLACE" in model:
         raise LLMError(f"مدل ایجنت «{agent}» در فایل .env تنظیم نشده است.")
-    msgs = [{"role": "system", "content": system}] + messages
+    msgs = [{"role": "system", "content": system + '\nReturn only a valid JSON object.'}] + messages
     last_err = None
     for attempt in range(retries + 1):
         kwargs = {"model": model, "messages": msgs}

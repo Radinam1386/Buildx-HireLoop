@@ -16,16 +16,21 @@ from .schemas import InterviewTurn, ProfileData, RefineDecision
 def interview_turn(db: Session, user: User, message: str) -> dict:
     prof = svc.get_profile(db, user)
     history = list(prof.messages or [])
+    if not message.strip() and not history:
+        reply = "سلام! دنبال چه نقش یا حوزه‌ای از برنامه‌نویسی هستی و با چه ابزارهایی کار می‌کنی؟"
+        prof.messages = [{"role": "assistant", "content": reply}]
+        db.commit()
+        return {"reply": reply, "profile": ProfileData.model_validate(prof.data).model_dump(), "ready": prof.ready}
     if message.strip():
         history.append({"role": "user", "content": message.strip()})
-    llm_msgs = history or [{"role": "user", "content": "(شروع گفتگو: به عنوان همراه تخصصی کاریابی برنامه‌نویسان HireLoop خوش‌آمد بگو و با یک سؤال کوتاه بپرس در چه حوزه و استکی از برنامه‌نویسی کار می‌کند یا دنبال چه شغلی است؛ مانند بک‌اند، فرانت‌اند، فول‌استک، هوش مصنوعی، موبایل یا دواپس؟)"}]
+    llm_msgs = history[-12:] or [{"role": "user", "content": "یک سؤال کوتاه دربارهٔ نقش هدف یا مهارت‌های ثبت‌نشده بپرس."}]
     old = ProfileData.model_validate(prof.data or {})
     system = prompts.INTERVIEWER.format(profile=json.dumps(old.model_dump(exclude={"excluded_job_ids"}), ensure_ascii=False))
     turn = chat_json(db, user.id, "interviewer", S.model_interviewer, system, llm_msgs, InterviewTurn)
     new = svc.merge_profile(old, turn.profile.model_dump()) if turn.profile else old
-    ready = bool(turn.ready and svc.meets_minimum(new))
+    ready = svc.meets_minimum(new)
     history.append({"role": "assistant", "content": turn.reply})
-    prof.data, prof.messages, prof.ready, prof.summary_en = new.model_dump(), history, ready, ""
+    prof.data, prof.messages, prof.ready, prof.summary_en = {**prof.data, **new.model_dump()}, history, ready, ""
     db.commit()
     return {"reply": turn.reply, "profile": new.model_dump(), "ready": ready}
 
@@ -63,7 +68,7 @@ def build_refine_graph(db: Session, user: User):
     def prefs(s: RState):
         p = ProfileData.model_validate(prof.data)
         patch = ProfileData.model_validate(s["decision"].patch).model_dump(exclude_unset=True)
-        prof.data = svc.merge_profile(p, patch, union=True).model_dump()
+        prof.data = {**prof.data, **svc.merge_profile(p, patch, union=True).model_dump()}
         prof.summary_en = ""
         db.commit()
         svc.run_match(db, user)
@@ -74,7 +79,7 @@ def build_refine_graph(db: Session, user: User):
         jid = s["decision"].job_id
         if jid not in p.excluded_job_ids:
             p.excluded_job_ids.append(jid)
-        prof.data = p.model_dump()
+        prof.data = {**prof.data, **p.model_dump()}
         for m in db.query(Match).filter_by(user_id=user.id, job_id=jid).all():
             db.delete(m)
         db.commit()

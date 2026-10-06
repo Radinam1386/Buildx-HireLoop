@@ -24,6 +24,57 @@
   --topbar-h: 68px;
 }
 
+/* Profile review and per-job evidence use native controls and the existing palette. */
+.review-actions, .review-head, .answer-options { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
+.review-head { justify-content: space-between; align-items: start; }
+.profile-editor { margin-bottom: 1.5rem; }
+.profile-editor > fieldset, .resume-prep > fieldset { border: 0; padding: 0; margin: 1rem 0 0; min-width: 0; display: grid; gap: 1rem; }
+.profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.profile-editor label, .prep-question > label { display: grid; gap: .35rem; font-size: .9rem; }
+.profile-group { display: grid; gap: .75rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+.profile-item { display: grid; gap: .65rem; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 1rem; min-width: 0; }
+.profile-item legend { padding: 0 .4rem; color: var(--muted); font-size: .85rem; }
+.resume-prep { margin-bottom: 1.5rem; }
+.prep-question { border: 0; border-top: 1px solid var(--line); padding: 1rem 0; margin: 0; min-width: 0; }
+.prep-question legend { font-weight: 600; padding-left: .5rem; font-size: .95rem; }
+.answer-options { margin: .5rem 0 1rem; }
+.answer-options label { display: flex; align-items: center; gap: .4rem; cursor: pointer; font-size: .9rem; }
+.answer-options input { accent-color: var(--blue); width: 1rem; height: 1rem; }
+.tailoring { display: grid; gap: 1rem; font-size: .9rem; }
+.tailoring h4 { margin: 0 0 .25rem; }
+.tailoring ol { margin: 0; padding-inline-start: 1.25rem; }
+
+/* Career tools keep their own layout; no background effects or scroll listeners. */
+.workspace-nav { display: flex; gap: .35rem; flex-wrap: wrap; max-width: 1200px; margin: 1rem auto 0; padding-inline: 1.25rem; }
+.workspace-nav a { color: var(--muted); padding: .4rem .8rem; border-radius: 8px; font-size: .9rem; }
+.workspace-nav a.active { background: var(--blue-50); color: var(--blue); font-weight: 700; }
+.content-editor { margin-bottom: 1.5rem; }
+.content-editor > fieldset, .practice-page form, .application-card fieldset, .job-analysis form { display: grid; gap: .9rem; border: 0; padding: 0; min-width: 0; }
+.content-editor label, .application-card label { display: grid; gap: .35rem; }
+.content-editor section { margin-block: 1rem; }
+.edit-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.edit-comparison .sheet { padding: 1rem; font-size: .9rem; min-height: 0; }
+.claim-source { font-size: .8rem; margin-top: .25rem; color: var(--muted); }
+.claim-source summary { cursor: pointer; color: var(--blue); width: fit-content; }
+.claim-source[open] { background: var(--blue-50); border-inline-start: 2px solid var(--blue); padding: .7rem; margin-bottom: .7rem; }
+.claim-source p { white-space: pre-wrap; overflow-wrap: anywhere; margin-block: .4rem; }
+.practice-page, .job-detail { display: grid; gap: 1rem; }
+.practice-page textarea, .job-analysis textarea { width: 100%; padding: .8rem; border: 1px solid var(--line); border-radius: var(--r-sm); resize: vertical; background: var(--surface); }
+.practice-page dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.practice-page dd { margin: .2rem 0; font-weight: 700; }
+.practice-page details, .job-analysis details { margin-top: .75rem; }
+.practice-page summary, .job-analysis summary, .application-card summary { cursor: pointer; }
+.prewrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+.job-analysis h3 { margin-block: 1rem .5rem; }
+.requirement { border-bottom: 1px solid var(--line); padding: .8rem 0; }
+.requirement blockquote { border-inline-start: 2px solid var(--line); margin: .7rem 0; padding-inline: .8rem; color: var(--muted); overflow-wrap: anywhere; }
+.track-job { display: flex; flex-wrap: wrap; gap: .5rem; }
+.track-job p { flex-basis: 100%; }
+.application-card { display: grid; gap: .8rem; align-content: start; }
+.application-card .sheet { min-height: 0; padding: 1rem; }
+@media (max-width: 650px) { .edit-comparison { grid-template-columns: 1fr; } .workspace-nav { gap: 0; padding-inline: .5rem; } }
+@media (max-width: 520px) { .profile-fields { grid-template-columns: 1fr; } }
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -98,7 +149,7 @@ a:hover {
   color: var(--blue-700);
 }
 
-button, input, textarea {
+button, input, textarea, select {
   font: inherit;
   color: inherit;
 }
@@ -1518,7 +1569,7 @@ button.chip:hover {
     background-image: none !important;
     color: #000 !important;
   }
-  .no-print, .topbar, .side, .rsplit > .side {
+  .no-print, .topbar, .side, .rsplit > .side, .drawer, .scrim {
     display: none !important;
   }
   .page {
@@ -1534,7 +1585,11 @@ button.chip:hover {
     border-top: 0 !important;
     padding: 0 !important;
     background: transparent !important;
+    min-height: 0 !important;
   }
+  .sheet h2, .sheet .row { break-after: avoid; }
+  .sheet li { break-inside: avoid; }
+  .sheet p, .sheet li { orphans: 3; widows: 3; }
   @page {
     margin: 16mm;
   }

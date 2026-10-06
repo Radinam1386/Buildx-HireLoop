@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, fa } from '../api'
 import { Chip, ErrorBox, Skeleton } from '../ui'
+import ProfileEditor from '../ProfileEditor'
+import ResumeImport from '../ResumeImport'
+import { useApp } from '../ctx'
 
 const LEVEL = { intern: 'کارآموز', junior: 'تازه‌کار', mid: 'میانی', senior: 'ارشد' }
 const REMOTE = { remote: 'دورکاری', hybrid: 'ترکیبی', onsite: 'حضوری', any: 'فرقی ندارد' }
@@ -48,12 +51,15 @@ const TRACK_CHIPS = [
 
 export default function Interview() {
   const nav = useNavigate()
+  const { refreshKey } = useApp()
   const [s, setS] = useState(null)
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [panel, setPanel] = useState(false)
   const [pending, setPending] = useState(null)
+  const [editing, setEditing] = useState(false)
+  const [importing, setImporting] = useState(false)
   const started = useRef(false)
   const logRef = useRef(null)
 
@@ -64,10 +70,14 @@ export default function Interview() {
   }
 
   useEffect(() => {
-    if (started.current) return
-    started.current = true
-    api('/api/interview').then((st) => { setS(st); if (!st.ready && !st.messages.length) post('') }).catch((e) => setErr(e.message))
-  }, [])
+    let active = true
+    api('/api/interview').then((st) => {
+      if (!active) return
+      setS(st)
+      if (!started.current && !st.ready && !st.messages.length) { started.current = true; post('') }
+    }).catch((e) => { if (active) setErr(e.message) })
+    return () => { active = false }
+  }, [refreshKey])
   useEffect(() => { logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' }) }, [s, busy])
 
   function send() {
@@ -90,19 +100,22 @@ export default function Interview() {
   return (
     <>
       <div className="page-head">
-        <div><h2>پروفایل شغلی تو</h2><p>از استک فنی، نقش هدف و پروژه‌هایت بگو؛ HireLoop جست‌وجوی آگهی‌ها را بر اساس تخصص برنامه‌نویسی‌ات انجام می‌دهد.</p></div>
-        <button className="btn btn-ghost profile-toggle" onClick={() => setPanel(true)}>پروفایل من · {fa(s.completeness)}٪</button>
+        <div><h2>پروفایل شغلی تو</h2><p>نقش و مهارت‌ها برای شروع جست‌وجو کافی‌اند. جزئیات پروژه‌ها را می‌توانی بعداً برای هر آگهی تکمیل کنی.</p></div>
+        <div className="review-actions"><button className="btn btn-blue" onClick={() => { setImporting(!importing); setEditing(false) }} disabled={busy}>ورود رزومهٔ موجود</button><button className="btn btn-ghost" onClick={() => { setEditing(!editing); setImporting(false) }} disabled={busy}>مرور و ویرایش اطلاعات</button><button className="btn btn-ghost profile-toggle" onClick={() => setPanel(true)}>پروفایل من · {fa(s.completeness)}٪</button></div>
       </div>
+      {editing && <ProfileEditor profile={s.profile} onClose={() => setEditing(false)} onSaved={(state) => { setS(state); setEditing(false) }} />}
+      {importing && <ResumeImport profile={s.profile} onClose={() => setImporting(false)} onImported={(state) => { setS(state); setImporting(false) }} />}
       <div className="split">
         <section className="card chat" aria-label="گفتگوی مصاحبه">
           <div className="chat-log" ref={logRef} aria-live="polite">
+            {!s.messages.length && s.ready && <div className="profile-imported"><h3>اطلاعاتت ثبت شده است</h3><p>می‌توانی جست‌وجوی آگهی‌ها را شروع کنی. برای تکمیل سابقه، از ویرایش اطلاعات استفاده کن یا همین‌جا دربارهٔ پروژه‌هایت بنویس.</p></div>}
             {s.messages.map((m, i) => <div key={i} className={'msg ' + (m.role === 'user' ? 'msg-u' : 'msg-a')}>{m.content}</div>)}
             {busy && <div className="typing" aria-label="در حال فکر کردن"><i /><i /><i /></div>}
             {err && <ErrorBox message={err} onRetry={pending !== null ? () => post(pending) : undefined} />}
           </div>
           {s.ready && (
             <div className="ready-bar">
-              <span>پروفایلت آماده است. می‌توانی ادامه بدهی یا هنوز چیزی اضافه کنی.</span>
+              <span>برای شروع جست‌وجو اطلاعات کافی داریم؛ تکمیل رزومه اختیاری است.</span>
               <button className="btn btn-primary" onClick={() => nav('/app/jobs', { state: { run: true } })}>ادامه به آگهی‌ها</button>
             </div>
           )}

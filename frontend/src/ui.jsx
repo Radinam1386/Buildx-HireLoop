@@ -63,7 +63,7 @@ export function Meter({ value }) {
   )
 }
 
-const STEPS = ['مصاحبه', 'آگهی‌ها', 'رزومه', 'بهبود']
+const STEPS = ['پروفایل', 'آگهی‌ها', 'رزومه', 'بهبود']
 export function Stepper({ current, onRefine }) {
   return (
     <ol className="stepper" aria-label="مراحل">

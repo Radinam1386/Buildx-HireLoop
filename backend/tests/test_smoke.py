@@ -52,6 +52,8 @@ def test_full_flow(monkeypatch):
         assert c.get("/api/interview").status_code == 401
 
         st = c.post("/api/interview/message", json={"message": ""}, headers=h).json()
+        assert not st['ready'] and st['messages']
+        st = c.post("/api/interview/message", json={"message": "React و JavaScript بلدم و دنبال کار فرانت‌اند هستم."}, headers=h).json()
         assert st["ready"] and st["completeness"] == 100
 
         ms = c.post("/api/matches/run", headers=h).json()["matches"]
