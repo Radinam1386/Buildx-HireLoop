@@ -236,8 +236,9 @@ def error_text(exc):
     return "دادهٔ منبع قابل تأیید نبود."
 
 
-async def search_source(client, semaphore, source, terms, profile):
+async def search_source(client, semaphore, source, terms, profile, checked=None):
     name, base = SOURCES[source]
+    checked = [] if checked is None else checked
     errors, found = [], {}
     search_ok = False
     for query in terms:
@@ -266,11 +267,15 @@ async def search_source(client, semaphore, source, terms, profile):
                 -sum(norm(s) in text for s in skill_names(profile)))
     # ponytail: first-page search remains bounded by each source and the per-source timeout.
     candidates = sorted(found.values(), key=priority)
-    checked, closed = [], 0
+    closed = 0
+    # Keep each board's detail queue from filling the shared request semaphore.
+    detail_slot = asyncio.Semaphore(1)
     async def check(card):
         nonlocal closed
         try:
-            job = detail(source, await request(client, semaphore, card["url"]), card, skill_names(profile))
+            async with detail_slot:
+                raw = await request(client, semaphore, card["url"])
+            job = detail(source, raw, card, skill_names(profile))
             if job:
                 checked.append(job)
             else:
@@ -295,10 +300,13 @@ async def search_jobs(profile):
         return dict(copy.deepcopy(_cache[key][1]), cached=True)
     semaphore = asyncio.Semaphore(4)
     async def bounded(source, client):
+        checked = []
         try:
-            return await asyncio.wait_for(search_source(client, semaphore, source, terms, profile), timeout=35)
+            return await asyncio.wait_for(search_source(client, semaphore, source, terms, profile, checked), timeout=35)
         except TimeoutError:
-            return [], {"id": source, "name": SOURCES[source][0], "status": "error", "count": 0, "error": "مهلت بررسی منبع تمام شد."}
+            return checked, {"id": source, "name": SOURCES[source][0], "status": "ok" if checked else "error",
+                             "count": len(checked), "truncated": True,
+                             "error": "مهلت بررسی کامل منبع تمام شد؛ آگهی‌های بررسی‌شده نمایش داده می‌شوند." if checked else "مهلت بررسی منبع تمام شد."}
     async with httpx.AsyncClient(timeout=10, headers={"User-Agent": "Mozilla/5.0", "x-lang": "fa"}, follow_redirects=False) as client:
         results = await asyncio.gather(*(bounded(source, client) for source in SOURCES))
     result = {"query": " / ".join(terms), "jobs": [j for jobs, _ in results for j in jobs], "sources": [status for _, status in results], "cached": False}

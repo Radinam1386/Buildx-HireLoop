@@ -36,6 +36,12 @@ cd frontend && npm install && npm run dev      # http://localhost:5173
 ```
 
 ## دیپلوی روی سرور
+
+نسخهٔ آنلاین: https://78.157.54.151/
+
+استقرار روی سرور مشترک منتورا با Nginx، systemd و دیپلوی خودکار GitHub Actions انجام می‌شود. مسیر فایل‌ها، پشتیبان‌گیری و فرمان‌های نگهداری در [راهنمای استقرار](deploy/README.md) هستند.
+
+برای سرور مستقل با Docker:
 ```bash
 docker compose up -d --build     # سایت روی پورت ۸۰
 ```

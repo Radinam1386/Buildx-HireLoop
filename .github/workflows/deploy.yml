@@ -1,0 +1,59 @@
+name: Test and deploy HireLoop
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hireloop-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Test backend
+        env:
+          PYTHONPATH: backend
+          DATABASE_URL: sqlite://
+          JWT_SECRET: ci-only-not-a-production-secret
+        run: |
+          pip install -r backend/requirements.txt
+          python -m pytest backend/tests -q
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Package and check deployment
+        run: |
+          tar --exclude='__pycache__' --exclude='*.pyc' -czf release.tgz backend/app backend/requirements.txt frontend/dist
+          python deploy/check.py release.tgz
+      - name: Deploy prepared release
+        env:
+          DEPLOY_KEY: ${{ secrets.HIRELOOP_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.HIRELOOP_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/hireloop
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/hireloop -o BatchMode=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 hireloop-deploy@78.157.54.151 "deploy $GITHUB_SHA" < release.tgz
+          curl --retry 3 --retry-delay 2 --fail --max-time 10 https://78.157.54.151/api/health

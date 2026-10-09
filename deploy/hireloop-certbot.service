@@ -1,0 +1,8 @@
+[Unit]
+Description=Renew HireLoop IP certificate
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/hireloop-certbot/bin/certbot renew --quiet --config-dir /etc/hireloop/letsencrypt --work-dir /var/lib/hireloop-certbot --logs-dir /var/log/hireloop-certbot --deploy-hook "/usr/sbin/nginx -t && /usr/bin/systemctl reload nginx"

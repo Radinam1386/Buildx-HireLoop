@@ -11,6 +11,55 @@ from app.models import Job, Profile, User
 from app.schemas import MatchBatch, MatchItem, ProfileData, SummaryOut
 
 
+def test_source_detail_queue_does_not_starve_other_boards(monkeypatch):
+    import asyncio
+    events = []
+    async def request(client, semaphore, url, body=None):
+        async with semaphore:
+            events.append(url)
+            await asyncio.sleep(0.001)
+            return '{}'
+
+    def cards(source, raw):
+        base = 'https://jobinja.ir/companies/test/jobs/' if source == 'jobinja' else 'https://jobvision.ir/jobs/'
+        return [{'url': base + str(1000+i), 'title': 'Python intern'} for i in range(12)]
+
+    monkeypatch.setattr(boards, 'request', request)
+    monkeypatch.setattr(boards, 'cards', cards)
+    monkeypatch.setattr(boards, 'api_cards', cards)
+    monkeypatch.setattr(boards, 'detail', lambda source, raw, card, skills: {'source': source, 'url': card['url']})
+    async def run():
+        semaphore = asyncio.Semaphore(1)
+        return await asyncio.gather(*(boards.search_source(None, semaphore, source, ['Python'], ProfileData())
+                                      for source in ('jobinja', 'jobvision')))
+
+    result = asyncio.run(run())
+    assert all(len(items) == 12 for items, status in result)
+    assert next(i for i, url in enumerate(events) if url.startswith('https://jobvision.ir/jobs/')) < 6
+
+
+def test_source_deadline_preserves_verified_jobs(monkeypatch):
+    import asyncio
+    job = {"source": "jobinja", "title": "Python intern", "url": "https://jobinja.ir/jobs/verified"}
+    async def source(client, semaphore, name, terms, profile, checked=None):
+        if name == "jobinja":
+            if checked is not None:
+                checked.append(job)
+            raise TimeoutError
+        if name == "karboom":
+            raise TimeoutError
+        return [], {"id": name, "status": "empty", "count": 0}
+
+    monkeypatch.setattr(boards, "search_source", source)
+    monkeypatch.setattr(boards, "_cache", {})
+    result = asyncio.run(boards.search_jobs(ProfileData(target_role="Python", skills=["Python"])))
+    assert result["jobs"] == [job]
+    status = next(s for s in result["sources"] if s["id"] == "jobinja")
+    assert status["status"] == "ok" and status["count"] == 1 and status["truncated"]
+    failed = next(s for s in result["sources"] if s["id"] == "karboom")
+    assert failed["status"] == "error" and failed["count"] == 0
+
+
 def test_preferences_do_not_relax_when_few_jobs_remain():
     p = ProfileData(city="تهران", level="intern", remote_pref="remote")
     jobs = [Job(id=1, title="Python intern", level="intern", remote=True),
