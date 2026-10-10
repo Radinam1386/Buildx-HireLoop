@@ -69,7 +69,7 @@ export function Stepper({ current, onRefine }) {
     <ol className="stepper" aria-label="مراحل">
       {STEPS.map((label, i) => {
         const state = i < current ? 'done' : i === current ? 'now' : 'todo'
-        const inner = (<><span className="dot">{state === 'done' ? '✓' : fa(i + 1)}</span><span className="lbl">{label}</span></>)
+        const inner = (<><span className="dot">{state === 'done' ? '✓' : '•'}</span><span className="lbl">{label}</span></>)
         return (
           <li key={label} className={`step step-${state}`} aria-current={state === 'now' ? 'step' : undefined}>
             {i === 0 && <Link to="/app/interview">{inner}</Link>}
