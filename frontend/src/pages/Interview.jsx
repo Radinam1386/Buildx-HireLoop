@@ -10,8 +10,12 @@ const LEVEL = { intern: 'کارآموز', junior: 'تازه‌کار', mid: 'م�
 const REMOTE = { remote: 'دورکاری', hybrid: 'ترکیبی', onsite: 'حضوری', any: 'فرقی ندارد' }
 
 function ProfilePanel({ s, open, onClose }) {
-  const p = s.profile
+  const p = s.profile || {}
+  const contact = p.contact || {}
   const row = (label, value) => value ? <><dt>{label}</dt><dd>{value}</dd></> : null
+  const skillText = (x) => typeof x === 'string' ? x : `${x.name}${x.level ? ` (${x.level})` : ''}`
+  const langText = (x) => typeof x === 'string' ? x : `${x.name}${x.level ? ` (${x.level})` : ''}`
+
   return (
     <aside className={'card profile' + (open ? ' open' : '')} aria-label="پروفایل من">
       <div>
@@ -19,20 +23,29 @@ function ProfilePanel({ s, open, onClose }) {
           <h3>پروفایل تو</h3><strong>{fa(s.completeness)}٪</strong>
         </div>
         <div className="progress" role="progressbar" aria-valuenow={s.completeness} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${s.completeness}%` }} /></div>
+        {s.focus && <p className="muted" style={{ fontSize: '.8rem', marginTop: '.4rem' }}>🎯 تمرکز گفتگو: {s.focus}</p>}
       </div>
       <dl>
         {row('نام', p.name)}
-        {row('شهر', p.city)}
+        {row('نام انگلیسی', p.name_en)}
+        {row('عنوان', p.headline)}
+        {row('شهر', p.city || contact.city)}
         {row('سطح', LEVEL[p.level])}
         {row('نقش هدف', p.target_role)}
         {row('نوع کار', REMOTE[p.remote_pref])}
-        {p.skills.length > 0 && <><dt>مهارت‌ها</dt><dd>{p.skills.map((x) => <Chip key={x}>{x}</Chip>)}</dd></>}
-        {p.projects.length > 0 && <><dt>پروژه‌ها</dt><dd>{p.projects.map((x) => <Chip key={x.name}>{x.name}</Chip>)}</dd></>}
-        {p.experience.length > 0 && <><dt>سابقه</dt><dd>{p.experience.map((x, i) => <Chip key={i}>{x.title || x.org}</Chip>)}</dd></>}
-        {p.education.length > 0 && <><dt>تحصیلات</dt><dd>{p.education.map((x, i) => <Chip key={i}>{x.degree || x.school}</Chip>)}</dd></>}
+        {(contact.email || contact.phone || contact.linkedin || contact.github) && (
+          <><dt>ارتباط</dt><dd style={{ fontSize: '.84rem' }}>{[contact.email, contact.phone, contact.linkedin && 'LinkedIn', contact.github && 'GitHub'].filter(Boolean).join(' · ')}</dd></>
+        )}
+        {(p.skills || []).length > 0 && <><dt>مهارت‌ها</dt><dd>{p.skills.map((x, i) => <Chip key={i}>{skillText(x)}</Chip>)}</dd></>}
+        {(p.honors || []).length > 0 && <><dt>افتخارات و جوایز</dt><dd>{p.honors.map((x, i) => <Chip key={i} style={{ borderColor: 'var(--orange)', color: 'var(--navy)' }}>🏅 {x.title}</Chip>)}</dd></>}
+        {(p.projects || []).length > 0 && <><dt>پروژه‌ها</dt><dd>{p.projects.map((x, i) => <Chip key={i}>{x.name}</Chip>)}</dd></>}
+        {(p.experience || []).length > 0 && <><dt>سابقه</dt><dd>{p.experience.map((x, i) => <Chip key={i}>{x.title || x.org}</Chip>)}</dd></>}
+        {(p.education || []).length > 0 && <><dt>تحصیلات</dt><dd>{p.education.map((x, i) => <Chip key={i}>{x.degree || x.school}{x.field ? ` (${x.field})` : ''}</Chip>)}</dd></>}
+        {(p.languages || []).length > 0 && <><dt>زبان‌ها</dt><dd>{p.languages.map((x, i) => <Chip key={i}>{langText(x)}</Chip>)}</dd></>}
+        {(p.certifications || []).length > 0 && <><dt>گواهی‌ها</dt><dd>{p.certifications.map((x, i) => <Chip key={i}>{x.name}</Chip>)}</dd></>}
       </dl>
-      {s.missing.length > 0 && (
-        <div><p className="muted" style={{ fontSize: '.88rem' }}>هنوز لازم است:</p>
+      {(s.missing || []).length > 0 && (
+        <div><p className="muted" style={{ fontSize: '.88rem' }}>پیشنهاد برای رزومهٔ کامل:</p>
           <ul className="todo">{s.missing.map((m) => <li key={m}>{m}</li>)}</ul></div>
       )}
       <button className="btn btn-ghost profile-toggle" onClick={onClose}>بستن</button>
@@ -113,12 +126,17 @@ export default function Interview() {
             {busy && <div className="typing" aria-label="در حال فکر کردن"><i /><i /><i /></div>}
             {err && <ErrorBox message={err} onRetry={pending !== null ? () => post(pending) : undefined} />}
           </div>
-          {s.ready && (
+          {s.resume_ready ? (
+            <div className="ready-bar" style={{ background: 'rgba(0, 78, 114, 0.08)', border: '1px solid rgba(0, 78, 114, 0.3)' }}>
+              <span>🎉 رزومهٔ تو اطلاعات کامل و حرفه‌ای را دارد و آمادهٔ ساخت است!</span>
+              <button className="btn btn-primary" onClick={() => nav('/app/jobs', { state: { run: true } })}>ادامه به آگهی‌ها و رزومه</button>
+            </div>
+          ) : s.ready ? (
             <div className="ready-bar">
               <span>برای شروع جست‌وجو اطلاعات کافی داریم؛ تکمیل رزومه اختیاری است.</span>
               <button className="btn btn-primary" onClick={() => nav('/app/jobs', { state: { run: true } })}>ادامه به آگهی‌ها</button>
             </div>
-          )}
+          ) : null}
           {!s.profile?.target_role && (
             <div style={{ padding: '0.6rem 1rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap', borderTop: '1px solid var(--border)' }}>
               <span className="muted" style={{ fontSize: '.8rem', width: '100%' }}>حوزه یا استک مورد نظرت را انتخاب کن یا در کادر زیر بنویس:</span>
@@ -128,7 +146,7 @@ export default function Interview() {
             </div>
           )}
           <div className="composer">
-            <textarea rows={1} value={text} placeholder="جوابت را بنویس…" onChange={(e) => setText(e.target.value)} disabled={busy}
+            <textarea rows={1} value={text} placeholder={s.resume_ready ? "چیزی هست که بخواهی اضافه یا ویرایش شود؟ بنویس…" : "جوابت را بنویس…"} onChange={(e) => setText(e.target.value)} disabled={busy}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }} aria-label="پیام" />
             <button className="btn btn-blue" onClick={send} disabled={busy || !text.trim()}>ارسال</button>
           </div>

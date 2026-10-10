@@ -1562,18 +1562,258 @@ button.chip:hover {
   to { transform: translateY(0); }
 }
 
-/* ---------- print (فقط رزومه) ---------- */
+/* ---------- Resume Completeness Bar ---------- */
+.resume-completeness-bar {
+  margin-bottom: 1.25rem;
+  padding: 1.1rem 1.35rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+}
+.completeness-content {
+  display: grid;
+  gap: .65rem;
+}
+.completeness-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .75rem;
+}
+.completeness-title {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+  font-size: .95rem;
+}
+.completeness-label {
+  color: var(--muted);
+}
+.badge-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .2rem .65rem;
+  background: rgba(0, 78, 114, 0.08);
+  color: var(--blue);
+  border: 1px solid rgba(0, 78, 114, 0.25);
+  border-radius: 999px;
+  font-size: .82rem;
+  font-weight: 600;
+}
+.badge-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .2rem .65rem;
+  background: rgba(255, 110, 66, 0.1);
+  color: #D9481E;
+  border: 1px solid rgba(255, 110, 66, 0.3);
+  border-radius: 999px;
+  font-size: .82rem;
+  font-weight: 600;
+}
+.btn-sm {
+  min-height: 36px;
+  padding: .4rem .9rem;
+  font-size: .88rem;
+}
+.missing-tags-list {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  flex-wrap: wrap;
+  font-size: .84rem;
+  margin-top: .15rem;
+}
+.missing-title {
+  color: var(--muted);
+}
+.missing-chip {
+  padding: .15rem .5rem;
+  background: var(--blue-50);
+  color: var(--blue);
+  border-radius: 6px;
+  font-size: .8rem;
+}
+
+/* ---------- Sheet Details ---------- */
+.contact-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .85rem 1.25rem;
+  align-items: center;
+  margin-top: .65rem;
+  font-size: .88rem;
+  color: var(--muted);
+}
+.contact-link, .contact-item {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color .15s ease;
+}
+.contact-link:hover {
+  color: var(--blue);
+  text-decoration: underline;
+}
+.contact-icon {
+  flex-shrink: 0;
+  color: var(--blue);
+  opacity: .85;
+}
+
+.skills-container {
+  display: flex;
+  flex-direction: column;
+  gap: .45rem;
+  margin-top: .35rem;
+}
+.skill-item-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .45rem .6rem;
+  font-size: .92rem;
+}
+.skill-name {
+  color: var(--ink);
+}
+.skill-level-badge {
+  padding: .1rem .45rem;
+  background: rgba(0, 78, 114, 0.08);
+  color: var(--blue);
+  border-radius: 4px;
+  font-size: .78rem;
+  font-weight: 600;
+}
+.skill-tools-text {
+  color: var(--muted);
+  font-size: .88rem;
+}
+.skill-tag, .lang-tag {
+  display: inline-block;
+  padding: .2rem .55rem;
+  background: var(--blue-50);
+  border-radius: 6px;
+  font-size: .85rem;
+  color: var(--blue);
+}
+
+.languages-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem 1.2rem;
+  font-size: .92rem;
+  margin-top: .35rem;
+}
+.lang-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: .25rem;
+}
+.lang-level-badge {
+  color: var(--muted);
+  font-size: .85rem;
+}
+
+.honor-item {
+  margin-bottom: .85rem;
+}
+.honor-title {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  color: var(--navy);
+}
+.honor-medal {
+  font-size: 1.15rem;
+  color: var(--orange);
+  line-height: 1;
+}
+.honor-desc {
+  margin-top: .25rem;
+  font-size: .88rem;
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.project-item {
+  margin-bottom: 1.1rem;
+}
+.proj-title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  flex-wrap: wrap;
+}
+.proj-role-badge {
+  padding: .1rem .45rem;
+  background: var(--blue-50);
+  color: var(--blue);
+  border-radius: 4px;
+  font-size: .78rem;
+  font-weight: 600;
+}
+.proj-ext-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  font-size: .8rem;
+  color: var(--blue);
+  text-decoration: none;
+  padding: .1rem .4rem;
+  background: rgba(0, 78, 114, 0.05);
+  border-radius: 4px;
+  transition: all .15s ease;
+}
+.proj-ext-link:hover {
+  background: rgba(0, 78, 114, 0.12);
+  color: var(--blue-700);
+}
+.proj-tech-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin-top: .35rem;
+}
+.tech-badge {
+  padding: .15rem .45rem;
+  background: rgba(9, 38, 52, 0.05);
+  border-radius: 4px;
+  font-size: .78rem;
+  color: var(--muted);
+  font-family: monospace;
+}
+
+/* ---------- print (فقط رزومه A4 بهینه) ---------- */
 @media print {
-  body {
-    background: #fff !important;
-    background-image: none !important;
-    color: #000 !important;
+  @page {
+    size: A4;
+    margin: 12mm;
   }
-  .no-print, .topbar, .side, .rsplit > .side, .drawer, .scrim {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #092634 !important;
+    font-size: 13.5px !important;
+    line-height: 1.55 !important;
+  }
+  .no-print, .topbar, .side, .rsplit > .side, .drawer, .scrim, .resume-completeness-bar {
     display: none !important;
   }
   .page {
     padding: 0 !important;
+    margin: 0 !important;
     max-width: none !important;
   }
   .rsplit {
@@ -1582,15 +1822,62 @@ button.chip:hover {
   .sheet {
     box-shadow: none !important;
     border-radius: 0 !important;
+    border: 0 !important;
     border-top: 0 !important;
     padding: 0 !important;
     background: transparent !important;
     min-height: 0 !important;
   }
-  .sheet h2, .sheet .row { break-after: avoid; }
-  .sheet li { break-inside: avoid; }
-  .sheet p, .sheet li { orphans: 3; widows: 3; }
-  @page {
-    margin: 16mm;
+  .sheet h1 {
+    font-size: 1.6rem !important;
+    margin-bottom: .2rem !important;
+  }
+  .sheet .head {
+    font-size: 1rem !important;
+    margin-top: 0 !important;
+  }
+  .sheet .contact {
+    margin-top: .35rem !important;
+    gap: .75rem !important;
+    font-size: .82rem !important;
+  }
+  .sheet section {
+    margin-top: 1rem !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .sheet h2 {
+    font-size: .95rem !important;
+    margin-bottom: .4rem !important;
+    padding-bottom: .2rem !important;
+    border-bottom: 1.5px solid var(--blue-100) !important;
+  }
+  .sheet .item, .sheet .honor-item, .sheet .project-item {
+    margin-bottom: .65rem !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .sheet h1, .sheet h2, .sheet .row {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  .sheet ul {
+    margin-top: .2rem !important;
+  }
+  .sheet li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .sheet p, .sheet li {
+    orphans: 3;
+    widows: 3;
+  }
+  .proj-ext-link {
+    background: none !important;
+    padding: 0 !important;
+  }
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
   }
 }

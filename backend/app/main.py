@@ -38,8 +38,18 @@ def _state(db: Session, user: User) -> dict:
     prof = svc.get_profile(db, user)
     p = ProfileData.model_validate(prof.data or {})
     pct, missing = svc.completeness(p)
-    return {"messages": prof.messages or [], "profile": p.model_dump(exclude={"excluded_job_ids"}),
-            "ready": prof.ready, "completeness": pct, "missing": missing}
+    cov = svc.coverage_report(p)
+    resume_ready = bool(prof.data.get("resume_ready") or svc.is_resume_ready(p))
+    return {
+        "messages": prof.messages or [],
+        "profile": p.model_dump(exclude={"excluded_job_ids"}),
+        "ready": prof.ready,
+        "resume_ready": resume_ready,
+        "completeness": pct,
+        "missing": missing,
+        "coverage": cov,
+        "focus": prof.data.get("_last_focus", ""),
+    }
 
 
 def _resume_out(r: Resume, db: Session) -> dict:

@@ -81,27 +81,113 @@ def docx(content: dict, lang: str) -> bytes:
                      f'<w:sz w:val="{"28" if heading else "22"}"/><w:szCs w:val="{"28" if heading else "22"}"/>'
                      f'{"<w:b/><w:bCs/>" if heading else ""}</w:rPr><w:t xml:space="preserve">{escape(text)}</w:t></w:r></w:p>')
 
-    labels = ['ارتباط', 'خلاصه', 'مهارت‌ها', 'سابقهٔ کار', 'پروژه‌ها', 'تحصیلات', 'زبان‌ها'] if rtl else ['Contact', 'Summary', 'Skills', 'Experience', 'Projects', 'Education', 'Languages']
-    paragraph(data.name, True); paragraph(data.headline)
-    for title, value in zip(labels[:3], [data.contact, data.summary, data.skills]):
-        if value:
-            paragraph(title, True)
-            paragraph(' · '.join(value) if isinstance(value, list) else value)
-    for title, items in [(labels[3], data.experience), (labels[4], data.projects), (labels[5], data.education)]:
-        if not items:
-            continue
-        paragraph(title, True)
-        for item in items:
-            if title == labels[3]:
-                paragraph(' · '.join(filter(None, [item.title, item.org, item.period])), True)
-                for bullet in item.bullets: paragraph('• ' + bullet)
-            elif title == labels[4]:
-                paragraph(item.name, True); paragraph(' · '.join(item.tech))
-                for bullet in item.bullets: paragraph('• ' + bullet)
+    labels = {
+        'contact': 'ارتباط' if rtl else 'Contact',
+        'summary': 'خلاصه' if rtl else 'Summary',
+        'skills': 'مهارت‌ها' if rtl else 'Skills',
+        'exp': 'سابقهٔ کار' if rtl else 'Experience',
+        'proj': 'پروژه‌ها' if rtl else 'Projects',
+        'edu': 'تحصیلات' if rtl else 'Education',
+        'lang': 'زبان‌ها' if rtl else 'Languages',
+        'honors': 'افتخارات و جوایز' if rtl else 'Honors & Awards',
+        'certs': 'گواهینامه‌ها' if rtl else 'Certifications',
+    }
+
+    disp_name = (data.name_en if rtl is False and data.name_en else data.name) or data.name
+    paragraph(disp_name, True)
+    if data.headline:
+        paragraph(data.headline)
+
+    contact_items = []
+    if isinstance(data.contact, dict):
+        for k in ('email', 'phone', 'city', 'country', 'linkedin', 'github', 'website'):
+            val = data.contact.get(k)
+            if val:
+                contact_items.append(str(val))
+    elif hasattr(data.contact, 'email'):
+        for k in ('email', 'phone', 'city', 'country', 'linkedin', 'github', 'website'):
+            val = getattr(data.contact, k, '')
+            if val:
+                contact_items.append(str(val))
+    if contact_items:
+        paragraph(labels['contact'], True)
+        paragraph(' · '.join(contact_items))
+
+    if data.summary:
+        paragraph(labels['summary'], True)
+        paragraph(data.summary)
+
+    if data.education:
+        paragraph(labels['edu'], True)
+        for item in data.education:
+            ed_title = ' — '.join(filter(None, [item.degree, item.field, item.school]))
+            if item.period:
+                ed_title += f' ({item.period})'
+            paragraph(ed_title)
+
+    if data.skills:
+        paragraph(labels['skills'], True)
+        skill_strs = []
+        for s in data.skills:
+            if hasattr(s, 'name'):
+                line = s.name
+                if s.tools:
+                    line += f" ({', '.join(s.tools)})"
+                if s.level:
+                    line += f" - {s.level}"
+                skill_strs.append(line)
             else:
-                paragraph(' · '.join(filter(None, [item.degree, item.school, item.period])))
+                skill_strs.append(str(s))
+        paragraph(' · '.join(skill_strs))
+
     if data.languages:
-        paragraph(labels[6], True); paragraph(' · '.join(data.languages))
+        paragraph(labels['lang'], True)
+        lang_strs = [
+            f"{l.name} ({l.level})" if hasattr(l, 'level') and l.level else (l.name if hasattr(l, 'name') else str(l))
+            for l in data.languages
+        ]
+        paragraph(' · '.join(lang_strs))
+
+    if data.honors:
+        paragraph(labels['honors'], True)
+        for h in data.honors:
+            h_line = ' — '.join(filter(None, [h.title, h.issuer, h.year, h.location]))
+            paragraph(h_line, True)
+            if h.description:
+                paragraph(h.description)
+
+    if data.experience:
+        paragraph(labels['exp'], True)
+        for item in data.experience:
+            paragraph(' · '.join(filter(None, [item.title, item.org, item.period])), True)
+            for bullet in item.bullets:
+                paragraph('• ' + bullet)
+
+    if data.projects:
+        paragraph(labels['proj'], True)
+        for item in data.projects:
+            pr_head = item.name
+            if item.role:
+                pr_head += f' — {item.role}'
+            if item.link:
+                pr_head += f' ({item.link})'
+            paragraph(pr_head, True)
+            if item.tech:
+                paragraph(' · '.join(item.tech))
+            for bullet in item.bullets:
+                paragraph('• ' + bullet)
+
+    if data.certifications:
+        paragraph(labels['certs'], True)
+        for c in data.certifications:
+            paragraph(' — '.join(filter(None, [c.name, c.issuer, c.year])))
+
+    if data.extra_sections:
+        for sec in data.extra_sections:
+            if sec.title:
+                paragraph(sec.title, True)
+                for itm in sec.items:
+                    paragraph('• ' + itm)
     document = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + ''.join(parts) + '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr></w:body></w:document>'
     output = BytesIO()
     with ZipFile(output, 'w', ZIP_DEFLATED) as archive:

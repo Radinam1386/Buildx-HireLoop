@@ -29,3 +29,17 @@ class Settings:
 
 
 S = Settings()
+
+# ترتیب استاندارد بخش‌های رزومه مطابق نمونهٔ مرجع
+RESUME_SECTION_ORDER = [
+    "header",          # نام و عنوان شغلی
+    "contact",         # اطلاعات تماس و لینک‌ها
+    "education",       # تحصیلات
+    "skills",          # مهارت‌ها با سطوح و ابزارها
+    "languages",       # زبان‌ها با سطوح
+    "summary",         # خلاصهٔ حرفه‌ای
+    "honors",          # افتخارات و جوایز
+    "projects_and_experience",  # پروژه‌ها و سوابق کاری
+    "certifications",  # گواهینامه‌ها
+    "extra_sections",  # بخش‌های تکمیلی و متفرقه
+]

@@ -11,6 +11,8 @@ from urllib.parse import quote, urlencode, urljoin, urlsplit, urlunsplit
 import httpx
 from bs4 import BeautifulSoup
 
+from .schemas import skill_names
+
 SOURCES = {"jobinja": ("جابینجا", "https://jobinja.ir/jobs"),
            "jobvision": ("جاب‌ویژن", "https://jobvision.ir/jobs"),
            "quera": ("کوئرا", "https://quera.org/magnet/jobs"),
@@ -71,7 +73,7 @@ def queries(profile):
     else:
         primary = next((value for key, value in TECH_ALIASES.items() if re.search(r"(?<!\w)" + re.escape(key) + r"(?!\w)", role)), "")
         if not primary and re.search(r"developer|programmer|software|برنامه نویس|توسعه دهنده|فرانت|بک اند|full.?stack|devops|دواپس|موبایل", role):
-            primary = next((TECH_ALIASES[norm(s)] for s in profile.skills if norm(s) in TECH_ALIASES), "")
+            primary = next((TECH_ALIASES[norm(s)] for s in skill_names(profile) if norm(s) in TECH_ALIASES), "")
         primary = primary or profile.target_role.strip()
     result = [primary[:120]]
     if profile.level == "intern":
@@ -261,14 +263,14 @@ async def search_source(client, semaphore, source, terms, profile):
         text = norm(card.get("title", "") + " " + card.get("location", ""))
         return (bool(profile.level) and level(card) not in (profile.level, ""),
                 bool(profile.city) and norm(profile.city) not in text and card.get("remote") is not True,
-                -sum(norm(s) in text for s in profile.skills))
+                -sum(norm(s) in text for s in skill_names(profile)))
     # ponytail: first-page search remains bounded by each source and the per-source timeout.
     candidates = sorted(found.values(), key=priority)
     checked, closed = [], 0
     async def check(card):
         nonlocal closed
         try:
-            job = detail(source, await request(client, semaphore, card["url"]), card, profile.skills)
+            job = detail(source, await request(client, semaphore, card["url"]), card, skill_names(profile))
             if job:
                 checked.append(job)
             else:
@@ -287,7 +289,7 @@ async def search_jobs(profile):
     terms = queries(profile)
     if not all(1 <= len(t.strip()) <= 200 for t in terms):
         raise ValueError("نقش هدف برای جست‌وجو معتبر نیست.")
-    key = (tuple(terms), profile.city, profile.remote_pref, profile.level, tuple(profile.skills))
+    key = (tuple(terms), profile.city, profile.remote_pref, profile.level, tuple(skill_names(profile)))
     now = time.monotonic()
     if key in _cache and now - _cache[key][0] < 300:
         return dict(copy.deepcopy(_cache[key][1]), cached=True)

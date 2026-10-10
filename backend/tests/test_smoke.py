@@ -6,9 +6,21 @@ from app.main import app  # noqa: E402
 from app.schemas import (InterviewTurn, JobExtract, MatchBatch, MatchItem, ProfileData, RefineDecision,  # noqa: E402
                          ResumeContent, SummaryOut)
 
-PROFILE = ProfileData(name="سارا", city="تهران", level="junior", target_role="Frontend Developer",
-                      remote_pref="remote", skills=["React", "JavaScript", "CSS"],
-                      projects=[{"name": "TodoApp", "description": "اپ کارها", "tech": ["React"]}])
+PROFILE = ProfileData(
+    name="سارا",
+    contact={"email": "sara@example.com", "phone": "09120000000", "city": "تهران", "github": "https://github.com/sara"},
+    city="تهران",
+    level="junior",
+    target_role="Frontend Developer",
+    remote_pref="remote",
+    skills=[{"name": "React", "level": "مسلط", "tools": ["Redux"]}, {"name": "JavaScript", "level": "پیشرفته", "tools": []}, {"name": "CSS", "level": "متوسط", "tools": []}],
+    education=[{"degree": "کارشناسی", "field": "مهندسی کامپیوتر", "school": "دانشگاه تهران", "period": "۱۴۰۰-۱۴۰۴"}],
+    languages=[{"name": "انگلیسی", "level": "پیشرفته"}, {"name": "فارسی", "level": "زبان مادری"}],
+    honors=[{"title": "رتبه ۱ مسابقات وب"}],
+    links=["https://github.com/sara"],
+    goals="توسعه‌دهنده فرانت‌اند با انگیزه برای ساخت رابط‌های کاربری جذاب و بهینه.",
+    projects=[{"name": "TodoApp", "description": "اپلیکیشن مدیریت کارهای روزمره با ری‌اکت و ریداکس با امکان فیلتر و جست‌وجو", "tech": ["React", "Redux"]}],
+)
 
 
 def fake_chat_json(db, user_id, agent, model, system, messages, schema, retries=1):

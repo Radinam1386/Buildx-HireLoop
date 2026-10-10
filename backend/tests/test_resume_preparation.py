@@ -64,12 +64,12 @@ def test_job_answers_are_private_persistent_and_used_only_when_confirmed(monkeyp
         assert saved.status_code == 200
         assert c.get(url, headers=h).json()['questions'][0]['answer'] == answers[0]['answer']
         assert c.get(url, headers=other).json()['questions'][0]['status'] == 'skip'
-        assert c.get('/api/interview', headers=h).json()['profile']['skills'] == ['Python', 'FastAPI']
+        assert [s['name'] if isinstance(s, dict) else s for s in c.get('/api/interview', headers=h).json()['profile']['skills']] == ['Python', 'FastAPI']
         bad = [{'id': questions[0]['id'], 'status': 'yes', 'answer': ''}]
         assert c.post('/api/resume/preparation', headers=h, json={**body, 'answers': bad}).status_code == 422
         assert c.post('/api/resume/preparation', headers=h, json={**body, 'answers': [answers[0], answers[0]]}).status_code == 422
         made = c.post('/api/resume', headers=h, json={'job_id': jid}).json()
-        assert made['content']['skills'] == ['Python', 'PostgreSQL']
+        assert [s['name'] if isinstance(s, dict) else s for s in made['content']['skills']] == ['Python', 'PostgreSQL']
         assert made['content']['projects'][0]['tech'] == ['Python']
         assert 'Docker' in made['tailoring']['unconfirmed']
         assert 'PostgreSQL' in made['tailoring']['highlighted_skills']

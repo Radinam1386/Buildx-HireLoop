@@ -15,7 +15,7 @@ from .config import S
 from .db import Base, get_db
 from .llm import chat_json
 from .models import Job, Profile, User
-from .schemas import ProfileData
+from .schemas import ProfileData, skill_names
 from .services import job_dict
 
 router = APIRouter()
@@ -113,7 +113,7 @@ def cached_analysis(db, user, job):
         return None
     prof = db.query(Profile).filter_by(user_id=user.id).first()
     p = ProfileData.model_validate(prof.data if prof else {})
-    skills = {skill_key(s): f'پروفایل: {s}' for s in p.skills}
+    skills = {skill_key(s): f'پروفایل: {s}' for s in skill_names(p)}
     for project in p.projects:
         for skill in project.tech:
             skills.setdefault(skill_key(skill), f'پروژهٔ {project.name}: {skill}')

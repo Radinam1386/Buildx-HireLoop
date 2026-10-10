@@ -17,22 +17,54 @@ def interview_turn(db: Session, user: User, message: str) -> dict:
     prof = svc.get_profile(db, user)
     history = list(prof.messages or [])
     if not message.strip() and not history:
-        reply = "سلام! دنبال چه نقش یا حوزه‌ای از برنامه‌نویسی هستی و با چه ابزارهایی کار می‌کنی؟"
+        reply = "سلام! برای شروع ساخت رزومهٔ کامل، دنبال چه نقش یا حوزه‌ای از برنامه‌نویسی هستی و بیشتر با چه ابزارهایی کار می‌کنی؟"
         prof.messages = [{"role": "assistant", "content": reply}]
         db.commit()
-        return {"reply": reply, "profile": ProfileData.model_validate(prof.data).model_dump(), "ready": prof.ready}
+        return {
+            "reply": reply,
+            "profile": ProfileData.model_validate(prof.data).model_dump(),
+            "ready": prof.ready,
+            "resume_ready": bool(prof.data.get("resume_ready")),
+            "focus": "شناسایی حوزهٔ کاری و فناوری‌های اصلی",
+        }
     if message.strip():
         history.append({"role": "user", "content": message.strip()})
     llm_msgs = history[-12:] or [{"role": "user", "content": "یک سؤال کوتاه دربارهٔ نقش هدف یا مهارت‌های ثبت‌نشده بپرس."}]
     old = ProfileData.model_validate(prof.data or {})
-    system = prompts.INTERVIEWER.format(profile=json.dumps(old.model_dump(exclude={"excluded_job_ids"}), ensure_ascii=False))
+    cov = svc.coverage_report(old)
+    is_core_done = svc.is_resume_ready(old) or bool(prof.data.get("resume_ready"))
+    core_status = "کامل (آمادهٔ ساخت رزومه)" if is_core_done else "در حال تکمیل"
+    system = prompts.INTERVIEWER.format(
+        profile=json.dumps(old.model_dump(exclude={"excluded_job_ids"}), ensure_ascii=False),
+        coverage_report=json.dumps(cov, ensure_ascii=False, indent=2),
+        core_status=core_status,
+    )
     turn = chat_json(db, user.id, "interviewer", S.model_interviewer, system, llm_msgs, InterviewTurn)
     new = svc.merge_profile(old, turn.profile.model_dump()) if turn.profile else old
     ready = svc.meets_minimum(new)
-    history.append({"role": "assistant", "content": turn.reply})
-    prof.data, prof.messages, prof.ready, prof.summary_en = {**prof.data, **new.model_dump()}, history, ready, ""
+    was_resume_ready = bool(prof.data.get("resume_ready"))
+    resume_ready = bool(turn.resume_ready or svc.is_resume_ready(new) or was_resume_ready)
+
+    reply = turn.reply
+    if resume_ready and not was_resume_ready:
+        if "کامل" not in reply or "اضافه" not in reply:
+            completion_note = "اطلاعات رزومهٔ شما کامل شد! 🎉 تمام بخش‌های اصلی با موفقیت ثبت شده‌اند. اگر نکته، مهارت یا سابقهٔ دیگری هست که می‌خواهید به رزومه اضافه یا ویرایش شود بفرمایید تا به رزومه اضافه کنم. در غیر این صورت، همه چیز آماده است و می‌توانید به بخش آگهی‌ها بروید و رزومهٔ متناسب با آگهی را بسازید."
+            reply = f"{reply}\n\n{completion_note}" if reply.strip() else completion_note
+
+    history.append({"role": "assistant", "content": reply})
+    prof_dict = new.model_dump()
+    prof_dict["resume_ready"] = resume_ready
+    if turn.focus:
+        prof_dict["_last_focus"] = turn.focus
+    prof.data, prof.messages, prof.ready, prof.summary_en = {**prof.data, **prof_dict}, history, ready, ""
     db.commit()
-    return {"reply": turn.reply, "profile": new.model_dump(), "ready": ready}
+    return {
+        "reply": reply,
+        "profile": new.model_dump(),
+        "ready": ready,
+        "resume_ready": resume_ready,
+        "focus": turn.focus,
+    }
 
 
 # ---------- Refiner (LangGraph) ----------

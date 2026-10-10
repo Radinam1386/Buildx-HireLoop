@@ -42,7 +42,7 @@ def test_import_review_and_export(monkeypatch):
             result = client.post('/api/profile/import', json={'text': 'Existing resume with React projects and actual experience. ' * 2 + 'Contact: candidate@example.test; Portfolio: https://example.test/work.'})
             assert result.status_code == 200, result.text
             proposal = result.json()['profile']
-            assert proposal['name'] == 'قبلی' and proposal['skills'] == ['Python', 'React']
+            assert proposal['name'] == 'قبلی' and [s['name'] if isinstance(s, dict) else s for s in proposal['skills']] == ['Python', 'React']
             assert 'candidate@example.test' in proposal['links'] and 'https://example.test/work' in proposal['links']
             assert 'excluded_job_ids' not in proposal
             assert len(calls) == 1
