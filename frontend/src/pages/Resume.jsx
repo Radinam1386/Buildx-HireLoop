@@ -59,7 +59,7 @@ function getContactItems(contact) {
   return {}
 }
 
-function ContactLinks({ contact }) {
+function ContactLinks({ contact, lang = "fa" }) {
   const c = getContactItems(contact)
   const items = []
 
@@ -79,7 +79,7 @@ function ContactLinks({ contact }) {
       </a>
     )
   }
-  const loc = [c.city, c.country].filter(Boolean).join("، ")
+  const loc = [c.city, c.country].filter(Boolean).join(lang === "en" ? ", " : "، ")
   if (loc) {
     items.push(
       <span key="loc" className="contact-item" title="Location">
@@ -160,7 +160,7 @@ function Sheet({ c, lang, evidence }) {
         </div>
       )}
 
-      <ContactLinks contact={c.contact} />
+      <ContactLinks contact={c.contact} lang={lang} />
 
       {c.summary && (
         <section>
@@ -312,7 +312,7 @@ function Sheet({ c, lang, evidence }) {
             <div className="item" key={i}>
               <div className="row">
                 <span>{[e.degree, e.field, e.school].filter(Boolean).join(" — ")}</span>
-                <small>{[e.period, e.gpa && ("معدل: " + e.gpa)].filter(Boolean).join(" · ")}</small>
+                <small>{[e.period, e.gpa && ((lang === "en" ? "GPA: " : "معدل: ") + e.gpa)].filter(Boolean).join(" · ")}</small>
               </div>
               {e.notes && <p className="muted" style={{ fontSize: ".85rem", marginTop: ".25rem" }}>{e.notes}</p>}
             </div>
@@ -965,7 +965,7 @@ function ResumeEditor() {
               {r.tailoring.highlighted_skills.length > 0 && (
                 <div>
                   <h4>مهارت‌های مرتبط در رزومه</h4>
-                  <p>{r.tailoring.highlighted_skills.join("، ")}</p>
+                  <p>{r.tailoring.highlighted_skills.join(lang === "en" ? ", " : "، ")}</p>
                 </div>
               )}
               {r.tailoring.projects.length > 0 && (
@@ -977,7 +977,7 @@ function ResumeEditor() {
               {r.tailoring.unconfirmed.length > 0 && (
                 <div>
                   <h4>نیازهای ذکر یا تأییدنشده</h4>
-                  <p>{r.tailoring.unconfirmed.join("، ")}</p>
+                  <p>{r.tailoring.unconfirmed.join(lang === "en" ? ", " : "، ")}</p>
                   <p className="muted">این موارد در اطلاعات این نسخه پشتوانه ندارند؛ این به معنی بلد نبودن تو نیست.</p>
                 </div>
               )}

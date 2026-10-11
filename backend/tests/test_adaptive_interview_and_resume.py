@@ -554,3 +554,211 @@ def test_resume_tailoring_to_job_requirements(monkeypatch):
         assert "Python" in res["tailoring"]["highlighted_skills"]
         assert res["tailoring"]["projects"] == ["Mentora"]
 
+
+def test_english_resume_guard_skills_bilingual():
+    """Verify that when a Persian profile is used to build an English resume,
+    valid translated items are preserved while fake items are dropped."""
+    profile = make_radin_profile()
+    # Add an experience in Persian
+    profile.experience = [
+        Exp(title="برنامه‌نویس ارشد پایتون", org="دیجی‌کالا", period="۱۴۰۱-۱۴۰۳", details="توسعه میکروسرویس‌های بک‌اند")
+    ]
+
+    en_content = ResumeContent(
+        name="Radin Almasi",
+        name_en="Radin Almasi",
+        headline="AI & Python Engineer",
+        education=[
+            # Valid translated education
+            Edu(degree="High School Diploma", field="Mathematics and Physics", school="SAMPAD High School"),
+            # Forged education
+            Edu(degree="Ph.D.", field="Nuclear Physics", school="Stanford University"),
+        ],
+        honors=[
+            # Valid translated honor
+            HonorItem(title="Bronze Medal in National AI Olympiad", issuer="National AI Committee", year="2024"),
+            # Forged honor
+            HonorItem(title="Nobel Prize in Computing"),
+        ],
+        languages=[
+            # Valid translated languages
+            LanguageItem(name="Persian", level="Native"),
+            LanguageItem(name="English", level="Advanced"),
+            # Forged language
+            LanguageItem(name="Japanese", level="Fluent"),
+        ],
+        experience=[
+            # Valid translated experience
+            ResumeExp(title="Senior Python Developer", org="Digikala", period="2022-2024", bullets=["Developed microservices"]),
+            # Forged experience
+            ResumeExp(title="VP of Engineering", org="Google Inc.", bullets=["Led team"]),
+        ],
+        projects=[
+            # Valid project
+            ResumeProj(name="Mentora", role="Lead Developer", tech=["Python", "FastAPI", "Docker", "Rust"], bullets=["Built system"]),
+            # Forged project
+            ResumeProj(name="Fabricated Drone Project", tech=["C++", "ROS"]),
+        ],
+        skills=[
+            SkillItem(name="Python", level="Advanced", tools=["FastAPI", "PyTorch"]),
+            SkillItem(name="Machine Learning & Deep Learning", level="Advanced", tools=["YOLO", "QuantumComputing"]),
+            SkillItem(name="Solidity & Smart Contracts", level="Expert"),
+        ],
+    )
+
+    guarded = _guard_skills(en_content, profile, lang="en")
+
+    # 1. Valid education preserved, fake dropped
+    assert len(guarded.education) == 1
+    assert "SAMPAD" in guarded.education[0].school
+    assert not any("Stanford" in ed.school for ed in guarded.education)
+
+    # 2. Valid honors preserved, fake dropped
+    assert len(guarded.honors) == 1
+    assert "Olympiad" in guarded.honors[0].title
+    assert not any("Nobel" in h.title for h in guarded.honors)
+
+    # 3. Valid languages preserved, fake dropped
+    assert len(guarded.languages) == 2
+    assert {l.name for l in guarded.languages} == {"Persian", "English"}
+
+    # 4. Valid experience preserved, fake dropped
+    assert len(guarded.experience) == 1
+    assert guarded.experience[0].org == "Digikala"
+    assert not any("Google" in ex.org for ex in guarded.experience)
+
+    # 5. Valid projects preserved, fake dropped, fake tech dropped
+    assert len(guarded.projects) == 1
+    assert guarded.projects[0].name == "Mentora"
+    assert "Rust" not in guarded.projects[0].tech
+    assert not any("Drone" in p.name for p in guarded.projects)
+
+    # 6. Valid skills preserved, fake skill and tool dropped
+    assert "Python" in [s.name for s in guarded.skills]
+    assert "Machine Learning & Deep Learning" in [s.name for s in guarded.skills]
+    assert "Solidity & Smart Contracts" not in [s.name for s in guarded.skills]
+    py_skill = next(s for s in guarded.skills if s.name == "Python")
+    assert "FastAPI" in py_skill.tools
+    ml_skill = next(s for s in guarded.skills if s.name == "Machine Learning & Deep Learning")
+    assert "QuantumComputing" not in ml_skill.tools
+
+
+def test_english_resume_evidence_gregorian_dates():
+    """Verify that resume_evidence recognizes Gregorian equivalents (e.g. 2024 for 1403)
+    and does not omit summary or bullets containing Gregorian dates."""
+    profile = make_radin_profile()
+    sources = resume_sources(profile, [])
+
+    content = {
+        "name": "Radin Almasi",
+        "headline": "AI Engineer",
+        "summary": "AI Engineer with experience building deep learning models in 2024.",
+        "projects": [
+            {
+                "name": "Mentora",
+                "tech": ["Python", "FastAPI"],
+                "bullets": [
+                    "Deployed system in 2024 with FastAPI.",
+                    "Improved latency by 9999 percent.",  # 9999 is unsupported
+                ],
+            }
+        ],
+    }
+
+    refs = [
+        ResumeEvidence(path="summary", source_ids=["project:0"]),
+        ResumeEvidence(path="projects.0.bullets.0", source_ids=["project:0"]),
+        ResumeEvidence(path="projects.0.bullets.1", source_ids=["project:0"]),
+    ]
+
+    res = resume_evidence(content, refs, sources)
+
+    # Summary should be kept because 2024 corresponds to 1403
+    assert content["summary"] != ""
+    assert "2024" in content["summary"]
+
+    # Bullet with 2024 should be kept
+    assert len(content["projects"][0]["bullets"]) == 1
+    assert "2024" in content["projects"][0]["bullets"][0]
+
+    # Unsupported 9999 must be omitted
+    assert any("9999" in o["text"] for o in res["omitted"])
+
+
+def test_english_resume_full_generation_and_preservation(monkeypatch):
+    """End-to-end test of English resume generation from a Persian profile."""
+    profile = make_radin_profile()
+
+    def fake_english_writer(db, uid, agent, model, system, messages, schema):
+        return ResumeContent(
+            name="Radin Almasi",
+            name_en="Radin Almasi",
+            headline="AI & Python Engineer",
+            contact=ContactData(email="radin@example.com", city="Tehran", country="Iran"),
+            summary="Passionate AI engineer and Olympiad medalist specialized in deep learning.",
+            skills=[
+                SkillItem(name="Python", level="Advanced", tools=["FastAPI", "PyTorch"]),
+                SkillItem(name="Machine Learning & Deep Learning", level="Advanced", tools=["PyTorch", "YOLO"]),
+                SkillItem(name="SQL & Databases", level="Intermediate", tools=["PostgreSQL"]),
+            ],
+            honors=[
+                HonorItem(title="Bronze Medal in National AI Olympiad", issuer="National Committee", year="2024"),
+            ],
+            education=[
+                Edu(degree="High School Diploma", field="Mathematics and Physics", school="SAMPAD High School", period="2020-2024"),
+            ],
+            projects=[
+                ResumeProj(
+                    name="Mentora",
+                    role="Lead Developer",
+                    tech=["Python", "FastAPI", "Docker"],
+                    bullets=["Architected microservices with FastAPI in 2024."],
+                ),
+            ],
+            languages=[
+                LanguageItem(name="Persian", level="Native"),
+                LanguageItem(name="English", level="Advanced"),
+            ],
+            evidence=[
+                ResumeEvidence(path="summary", source_ids=["project:0"]),
+                ResumeEvidence(path="honors.0.title", source_ids=["honors:0"]),
+                ResumeEvidence(path="projects.0.bullets.0", source_ids=["project:0"]),
+            ],
+        )
+
+    monkeypatch.setattr(services, "chat_json", fake_english_writer)
+
+    with TestClient(app) as c:
+        token = c.post("/api/auth/register", json={"email": "en-resume-test@example.com", "password": "pass1234password"}).json()["token"]
+        h = {"Authorization": f"Bearer {token}"}
+        c.patch("/api/profile", headers=h, json=profile.model_dump())
+
+        with SessionLocal() as db:
+            job = Job(
+                title="AI & Python Engineer",
+                company="GlobalTech",
+                source="sample",
+                description="FastAPI, Python, Deep Learning",
+                skills=["Python", "FastAPI"],
+            )
+            db.add(job)
+            db.commit()
+            jid = job.id
+
+        res = c.post("/api/resume", headers=h, json={"job_id": jid, "lang": "en"}).json()
+
+        # Verify all sections are intact in English
+        content = res["content"]
+        assert content["name"] == "Radin Almasi"
+        assert len(content["education"]) == 1
+        assert "SAMPAD" in content["education"][0]["school"]
+        assert len(content["honors"]) == 1
+        assert "Olympiad" in content["honors"][0]["title"]
+        assert len(content["languages"]) == 2
+        assert len(content["projects"]) == 1
+        assert content["projects"][0]["name"] == "Mentora"
+        assert len(content["skills"]) == 3
+        assert content["summary"] != ""
+        assert res["tailoring"]["projects"] == ["Mentora"]
+
+

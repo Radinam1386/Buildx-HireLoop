@@ -501,8 +501,273 @@ def soft_match(claim: str, candidates: list[str]) -> bool:
     return False
 
 
-def _guard_skills(content: ResumeContent, p: ProfileData) -> ResumeContent:
-    """محافظ ضدجعل تعمیم‌یافته: هر مهارت، افتخار، مدرک، پروژه، سابقه و شرکت باید با آیتم‌های پروفایل منطبق باشد."""
+BILINGUAL_MAP: dict[str, list[str]] = {
+    # Degrees
+    "دیپلم": ["diploma", "high school diploma", "high school", "secondary"],
+    "کاردانی": ["associate", "associate degree"],
+    "فوق دیپلم": ["associate", "associate degree"],
+    "کارشناسی": ["bachelor", "bachelor of science", "b.sc", "b.s", "bs", "ba", "bachelors", "bachelor's"],
+    "لیسانس": ["bachelor", "bachelor of science", "b.sc", "b.s", "bs", "ba", "bachelors", "bachelor's"],
+    "کارشناسی ارشد": ["master", "master of science", "m.sc", "m.s", "ms", "ma", "masters", "master's"],
+    "فوق لیسانس": ["master", "master of science", "m.sc", "m.s", "ms", "ma", "masters", "master's"],
+    "دکتری": ["phd", "ph.d", "doctorate", "doctor of philosophy"],
+    "دکترا": ["phd", "ph.d", "doctorate", "doctor of philosophy"],
+    # Fields of study
+    "مهندسی کامپیوتر": ["computer engineering", "computer science"],
+    "علوم کامپیوتر": ["computer science"],
+    "مهندسی نرم افزار": ["software engineering"],
+    "مهندسی نرم‌افزار": ["software engineering"],
+    "نرم افزار": ["software"],
+    "نرم‌افزار": ["software"],
+    "سخت افزار": ["hardware"],
+    "سخت‌افزار": ["hardware"],
+    "هوش مصنوعی": ["artificial intelligence", "ai"],
+    "فناوری اطلاعات": ["information technology", "it"],
+    "مهندسی فناوری اطلاعات": ["information technology", "it"],
+    "برق": ["electrical", "electrical engineering"],
+    "مهندسی برق": ["electrical engineering"],
+    "مکانیک": ["mechanical", "mechanical engineering"],
+    "صنایع": ["industrial", "industrial engineering"],
+    "عمران": ["civil", "civil engineering"],
+    "ریاضی": ["mathematics", "math"],
+    "فیزیک": ["physics"],
+    "ریاضی و فیزیک": ["mathematics and physics", "math and physics", "mathematics", "physics"],
+    # Schools & Universities
+    "سمپاد": ["sampad", "nodet", "national organization for development of exceptional talents"],
+    "استعدادهای درخشان": ["exceptional talents", "sampad", "nodet"],
+    "تیزهوشان": ["gifted", "sampad", "nodet"],
+    "شریف": ["sharif", "sharif university of technology", "sharif university"],
+    "دانشگاه صنعتی شریف": ["sharif university of technology", "sharif university", "sharif"],
+    "تهران": ["tehran", "university of tehran", "tehran university"],
+    "دانشگاه تهران": ["university of tehran", "tehran university", "tehran"],
+    "امیرکبیر": ["amirkabir", "amirkabir university of technology", "polytechnic"],
+    "دانشگاه صنعتی امیرکبیر": ["amirkabir university of technology", "amirkabir university", "polytechnic"],
+    "علم و صنعت": ["iran university of science and technology", "iust", "science and technology"],
+    "دانشگاه علم و صنعت": ["iran university of science and technology", "iust"],
+    "شهید بهشتی": ["shahid beheshti", "shahid beheshti university", "sbu"],
+    "دانشگاه شهید بهشتی": ["shahid beheshti university", "shahid beheshti", "sbu"],
+    "خواجه نصیر": ["k. n. toosi university of technology", "kntu", "toosi"],
+    "صنعتی اصفهان": ["isfahan university of technology", "iut"],
+    "اصفهان": ["isfahan", "university of isfahan"],
+    "شیراز": ["shiraz", "shiraz university"],
+    "فردوسی": ["ferdowsi", "ferdowsi university of mashhad"],
+    "تبریز": ["tabriz", "university of tabriz"],
+    "آزاد": ["islamic azad university", "azad university", "azad"],
+    "دانشگاه آزاد": ["islamic azad university", "azad university", "azad"],
+    "علامه طباطبایی": ["allameh tabataba'i", "allameh"],
+    "تربیت مدرس": ["tarbiat modares", "tmu"],
+    # Languages
+    "فارسی": ["persian", "farsi"],
+    "انگلیسی": ["english"],
+    "فرانسوی": ["french"],
+    "فرانسه": ["french"],
+    "آلمانی": ["german"],
+    "عربی": ["arabic"],
+    "ترکی": ["turkish", "azeri"],
+    "اسپانیایی": ["spanish"],
+    "روسی": ["russian"],
+    "چینی": ["chinese"],
+    "ایتالیایی": ["italian"],
+    # Roles & Job titles
+    "برنامه‌نویس": ["developer", "programmer", "software engineer", "engineer"],
+    "توسعه‌دهنده": ["developer", "programmer", "software engineer", "engineer"],
+    "توسعه دهنده": ["developer", "programmer", "software engineer", "engineer"],
+    "مهندس": ["engineer"],
+    "ارشد": ["senior", "lead"],
+    "تازه کار": ["junior"],
+    "جونیور": ["junior"],
+    "کارآموز": ["intern", "internship"],
+    "بک‌اند": ["backend", "back-end"],
+    "بک اند": ["backend", "back-end"],
+    "فرانت‌اند": ["frontend", "front-end"],
+    "فرانت اند": ["frontend", "front-end"],
+    "فول‌استک": ["full stack", "fullstack", "full-stack"],
+    "فول استک": ["full stack", "fullstack", "full-stack"],
+    "دواپس": ["devops"],
+    "دوآپس": ["devops"],
+    "یادگیری ماشین": ["machine learning", "ml"],
+    "یادگیری عمیق": ["deep learning", "dl"],
+    "بینایی ماشین": ["computer vision", "cv"],
+    "پردازش تصویر": ["image processing", "computer vision"],
+    "پردازش زبان طبیعی": ["natural language processing", "nlp"],
+    "علم داده": ["data science", "data scientist"],
+    "دانشمند داده": ["data scientist"],
+    "پایگاه داده": ["database", "databases", "sql"],
+    "دیتابیس": ["database", "databases", "sql"],
+    "معماری نرم‌افزار": ["software architecture", "architect"],
+    "مدیر فنی": ["tech lead", "cto", "engineering manager"],
+    "سرپرست": ["lead", "supervisor"],
+    # Honors & Awards
+    "المپیاد": ["olympiad"],
+    "مدال": ["medal"],
+    "برنز": ["bronze"],
+    "نقره": ["silver"],
+    "طلا": ["gold"],
+    "رتبه": ["rank", "place", "top"],
+    "مقام": ["rank", "place", "standing"],
+    "مسابقات": ["contest", "competition", "hackathon"],
+    "رقابت": ["competition", "contest"],
+    "جشنواره": ["festival"],
+    "خوارزمی": ["kharazmi", "khwarizmi"],
+    "کمیته ملی": ["national committee"],
+    "ملی": ["national"],
+    "بین‌المللی": ["international"],
+    # Technical skills
+    "پایتون": ["python"],
+    "جاوا": ["java"],
+    "جاوااسکریپت": ["javascript", "js"],
+    "تایپ‌اسکریپت": ["typescript", "ts"],
+    "تایپ اسکریپت": ["typescript", "ts"],
+    "سی پلاس پلاس": ["c++", "cpp"],
+    "سی شارپ": ["c#", "csharp"],
+    "پی اچ پی": ["php"],
+    "جنگو": ["django"],
+    "فست ای‌پی‌آی": ["fastapi"],
+    "فست ای پی آی": ["fastapi"],
+    "فلاسک": ["flask"],
+    "ری‌اکت": ["react", "reactjs", "react.js"],
+    "ری اکت": ["react", "reactjs", "react.js"],
+    "ویو": ["vue", "vuejs"],
+    "انگولار": ["angular"],
+    "نود جی‌اس": ["node", "nodejs", "node.js"],
+    "نود جی اس": ["node", "nodejs", "node.js"],
+    "داکر": ["docker"],
+    "کوبرنتیز": ["kubernetes", "k8s"],
+    "گیت": ["git"],
+    "لینوکس": ["linux"],
+    "میکروسرویس": ["microservices", "microservice"],
+    "الگوریتم": ["algorithms", "algorithm"],
+    "ساختمان داده": ["data structures", "data structure"],
+    "طراحی وب": ["web development", "web design"],
+    "شبکه": ["network", "networking"],
+    "امنیت": ["security", "cybersecurity"],
+    # Common Iranian Companies
+    "دیجی‌کالا": ["digikala"],
+    "دیجیکالا": ["digikala"],
+    "اسنپ": ["snapp"],
+    "تپسی": ["tapsi"],
+    "کافه‌بازار": ["cafe bazaar", "cafebazaar", "bazaar"],
+    "کافه بازار": ["cafe bazaar", "cafebazaar", "bazaar"],
+    "دیوار": ["divar"],
+    "علی‌بابا": ["alibaba"],
+    "علی بابا": ["alibaba"],
+    "آپارات": ["aparat"],
+    "ایرانسل": ["irancell"],
+    "همراه اول": ["mci", "hamrah aval"],
+    "بانک": ["bank"],
+    "بانک ملت": ["mellat bank", "mellat"],
+    "بانک ملی": ["melli bank", "melli"],
+    "بانک سامان": ["saman bank", "saman"],
+    "بانک پاسارگاد": ["pasargad bank", "pasargad"],
+    "توسن": ["tosan"],
+    "داتین": ["dotin"],
+    "فناپ": ["fanap"],
+    # Generic & Project words
+    "سامانه": ["system", "platform"],
+    "سیستم": ["system"],
+    "پلتفرم": ["platform"],
+    "پرتال": ["portal"],
+    "مدیریت": ["management"],
+    "انبار": ["warehouse"],
+    "فروشگاه": ["store", "shop", "ecommerce", "e-commerce"],
+    "آموزش": ["education", "learning", "school"],
+    "آموزشگاه": ["school", "academy", "institute"],
+    "تشخیص چهره": ["face recognition"],
+    "کارت ملی": ["national id"],
+    "احراز هویت": ["authentication", "auth"],
+    "گواهی": ["certificate", "certification"],
+    "گواهینامه": ["certificate", "certification"],
+    "مدرک": ["certificate", "certification", "degree"],
+}
+
+_TRANSLIT_MAP = str.maketrans({
+    "آ": "a", "ا": "a", "ب": "b", "پ": "p", "ت": "t", "ث": "s", "ج": "j", "چ": "ch",
+    "ح": "h", "خ": "kh", "د": "d", "ذ": "z", "ر": "r", "ز": "z", "ژ": "zh", "س": "s",
+    "ش": "sh", "ص": "s", "ض": "z", "ط": "t", "ظ": "z", "ع": "", "غ": "gh", "ف": "f",
+    "ق": "gh", "ک": "k", "گ": "g", "ل": "l", "م": "m", "ن": "n", "و": "v", "ه": "h",
+    "ی": "y", "ي": "y", "ك": "k", "ء": "", "ئ": "", "ؤ": "v",
+})
+
+
+def _transliterate(text: str) -> str:
+    return text.translate(_TRANSLIT_MAP)
+
+
+_EN_TO_FA: dict[str, set[str]] = {}
+_FA_TO_EN: dict[str, set[str]] = {}
+for _fa, _en_list in BILINGUAL_MAP.items():
+    _fa_norm = norm(_fa).strip().lower()
+    _fa_tokens = set(_fa_norm.split()) | {_fa_norm.replace(" ", "")}
+    for _en in _en_list:
+        _en_words = {w.lower() for w in _en.split()}
+        for _word in _en_words:
+            _EN_TO_FA.setdefault(_word, set()).update(_fa_tokens)
+        for _tok in _fa_tokens:
+            _FA_TO_EN.setdefault(_tok, set()).update(_en_words)
+
+
+def is_latin(text: str) -> bool:
+    return bool(re.search(r"[a-zA-Z]", text))
+
+
+def bilingual_soft_match(claim: str, candidates: list[str]) -> bool:
+    """تطبیق هوشمند دوزبانه (فارسی و انگلیسی) برای جلوگیری از جعل ضمن حفظ صحت ترجمه‌ها."""
+    if soft_match(claim, candidates):
+        return True
+    if not claim or not candidates:
+        return False
+    nc = norm(claim).strip().lower()
+    claim_has_latin = is_latin(nc)
+
+    stop_words = {"in", "and", "of", "at", "the", "for", "to", "with", "و", "در", "از", "با", "به"}
+    w_claim = set(re.findall(r"\w+", nc))
+    w_claim_filtered = {w for w in w_claim if w not in stop_words} or w_claim
+    if not w_claim_filtered:
+        return False
+
+    for cand in candidates:
+        if not cand:
+            continue
+        n_cand = norm(cand).strip().lower()
+        cand_has_latin = is_latin(n_cand)
+        if not claim_has_latin and not cand_has_latin:
+            continue
+
+        w_cand = set(re.findall(r"\w+", n_cand))
+        if not w_cand:
+            continue
+
+        cand_tl = _transliterate(n_cand)
+
+        matched_words = set()
+        for w in w_claim_filtered:
+            if w in w_cand:
+                matched_words.add(w)
+                continue
+            fa_targets = _EN_TO_FA.get(w, set())
+            if fa_targets & w_cand:
+                matched_words.add(w)
+                continue
+            en_targets = _FA_TO_EN.get(w, set())
+            if en_targets & w_cand:
+                matched_words.add(w)
+                continue
+            w_tl = _transliterate(w)
+            if len(w_tl) >= 3 and (w_tl in cand_tl or cand_tl in w_tl):
+                matched_words.add(w)
+                continue
+
+        coverage = len(matched_words) / len(w_claim_filtered)
+        if len(w_claim_filtered) <= 2:
+            if coverage >= 1.0:
+                return True
+        elif coverage >= 0.6:
+            return True
+    return False
+
+
+def _guard_skills(content: ResumeContent, p: ProfileData, lang: str = "fa") -> ResumeContent:
+    """محافظ ضدجعل تعمیم‌یافته دوزبانه: هر مهارت، افتخار، مدرک، پروژه، سابقه و شرکت باید با آیتم‌های پروفایل منطبق باشد."""
     known_skills = {norm(s) for s in skill_names(p)} | {norm(t) for pr in p.projects for t in pr.tech}
     allowed_skills_list = skill_names(p) + [t for pr in p.projects for t in pr.tech]
 
@@ -512,11 +777,11 @@ def _guard_skills(content: ResumeContent, p: ProfileData) -> ResumeContent:
     filtered_skills = []
     for old_idx, s in enumerate(before_skills):
         s_name = s.name if hasattr(s, "name") else str(s)
-        if norm(s_name) in known_skills or soft_match(s_name, allowed_skills_list):
+        if norm(s_name) in known_skills or bilingual_soft_match(s_name, allowed_skills_list):
             new_idx = len(filtered_skills)
             skill_indices[old_idx] = new_idx
             if hasattr(s, "tools") and s.tools:
-                s.tools = [t for t in s.tools if norm(t) in known_skills or soft_match(t, allowed_skills_list)]
+                s.tools = [t for t in s.tools if norm(t) in known_skills or bilingual_soft_match(t, allowed_skills_list)]
             filtered_skills.append(s)
     content.skills = filtered_skills
 
@@ -527,16 +792,19 @@ def _guard_skills(content: ResumeContent, p: ProfileData) -> ResumeContent:
     filtered_projects = []
     proj_names = [pr.name for pr in p.projects]
     for old_idx, raw_pr in enumerate(raw_projects):
-        if soft_match(raw_pr.name, proj_names):
+        orig = next((orig for orig in p.projects if bilingual_soft_match(orig.name, [raw_pr.name])), None)
+        if not orig and raw_pr.tech:
+            raw_tech_norm = {norm(t) for t in raw_pr.tech}
+            orig = next((orig for orig in p.projects if len(raw_tech_norm & {norm(t) for t in orig.tech}) >= 1), None)
+        if orig or bilingual_soft_match(raw_pr.name, proj_names):
             new_idx = len(filtered_projects)
             project_indices[old_idx] = new_idx
-            orig = next((orig for orig in p.projects if soft_match(orig.name, [raw_pr.name])), None)
             allowed_tech = {norm(t) for t in orig.tech} if orig else known_skills
             allowed_tech_list = (orig.tech if orig else []) + allowed_skills_list
             before_tech = list(raw_pr.tech)
             filtered_tech = []
             for old_t_idx, t in enumerate(before_tech):
-                if norm(t) in allowed_tech or soft_match(t, allowed_tech_list):
+                if norm(t) in allowed_tech or bilingual_soft_match(t, allowed_tech_list):
                     new_t_idx = len(filtered_tech)
                     tech_indices[(old_idx, old_t_idx)] = (new_idx, new_t_idx)
                     filtered_tech.append(t)
@@ -556,7 +824,9 @@ def _guard_skills(content: ResumeContent, p: ProfileData) -> ResumeContent:
     else:
         content.experience = [
             ex for ex in content.experience
-            if soft_match(f"{ex.title} {ex.org}", exp_candidates)
+            if bilingual_soft_match(f"{ex.title} {ex.org}", exp_candidates)
+            or (bilingual_soft_match(ex.org, [e.org for e in p.experience if e.org])
+                and bilingual_soft_match(ex.title, [e.title for e in p.experience if e.title]))
         ]
 
     # ۴. تحصیلات
@@ -570,7 +840,9 @@ def _guard_skills(content: ResumeContent, p: ProfileData) -> ResumeContent:
     else:
         content.education = [
             ed for ed in content.education
-            if soft_match(f"{ed.degree} {ed.field} {ed.school}", edu_candidates)
+            if bilingual_soft_match(f"{ed.degree} {ed.field} {ed.school}", edu_candidates)
+            or (bilingual_soft_match(ed.school, [e.school for e in p.education if e.school])
+                and bilingual_soft_match(ed.degree, [e.degree for e in p.education if e.degree]))
         ]
 
     # ۵. افتخارات
@@ -578,28 +850,28 @@ def _guard_skills(content: ResumeContent, p: ProfileData) -> ResumeContent:
     if not p.honors:
         content.honors = []
     else:
-        content.honors = [h for h in content.honors if soft_match(h.title, honor_candidates)]
+        content.honors = [h for h in content.honors if bilingual_soft_match(h.title, honor_candidates)]
 
     # ۶. گواهینامه‌ها
     cert_candidates = [c.name for c in p.certifications]
     if not p.certifications:
         content.certifications = []
     else:
-        content.certifications = [c for c in content.certifications if soft_match(c.name, cert_candidates)]
+        content.certifications = [c for c in content.certifications if bilingual_soft_match(c.name, cert_candidates)]
 
     # ۷. زبان‌ها
     lang_candidates = [l.name for l in p.languages]
     if not p.languages:
         content.languages = []
     else:
-        content.languages = [l for l in content.languages if soft_match(l.name, lang_candidates)]
+        content.languages = [l for l in content.languages if bilingual_soft_match(l.name, lang_candidates)]
 
     # ۸. بخش‌های تکمیلی
     extra_candidates = [es.title for es in p.extra_sections]
     if not p.extra_sections:
         content.extra_sections = []
     else:
-        content.extra_sections = [es for es in content.extra_sections if soft_match(es.title, extra_candidates)]
+        content.extra_sections = [es for es in content.extra_sections if bilingual_soft_match(es.title, extra_candidates)]
 
     # به‌روزرسانی مسیرهای evidence برای پروژه‌ها و مهارت‌ها
     paths = {}
@@ -722,12 +994,27 @@ def resume_evidence(content: dict, refs: list, sources: list) -> dict:
     digits = str.maketrans('۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩', '01234567890123456789')
     numbers = lambda text: set(re.findall(r'\d+(?:[.٫]\d+)?', text.translate(digits)))
     all_numbers = numbers(' '.join(s['text'] for s in sources))
+
+    def _expand_years(nums: set[str]) -> set[str]:
+        expanded = set(nums)
+        for n in nums:
+            if n.isdigit() and len(n) == 4:
+                val = int(n)
+                if 1300 <= val <= 1500:
+                    expanded.add(str(val + 621))
+                    expanded.add(str(val + 622))
+                elif 1980 <= val <= 2035:
+                    expanded.add(str(val - 621))
+                    expanded.add(str(val - 622))
+        return expanded
+
+    supported_all = _expand_years(all_numbers)
     claims, omitted = [], []
     for path, text in resume_texts(content).items():
         ids = pointers.get(path, [])
         if not ids:
             ids = [s['id'] for s in sources if text.casefold() in s['text'].casefold()]
-        supported_numbers = numbers(' '.join(known[s]['text'] for s in ids)) if ids else all_numbers
+        supported_numbers = _expand_years(numbers(' '.join(known[s]['text'] for s in ids))) if ids else supported_all
         if (path == 'summary' or '.bullets.' in path or '.description' in path) and numbers(text) - supported_numbers:
             omitted.append({'path': path, 'text': text, 'reason': 'عدد این ادعا در منابع انتخاب‌شده پیدا نشد.'})
             continue
@@ -772,9 +1059,9 @@ def edit_resume(db: Session, user: User, body) -> Resume:
     job = db.get(Job, body.job_id)
     required = {norm(s) for s in job.skills or []}
     included = {norm(s) for s in skill_names(content)} | {norm(t) for pr in content.get('projects', []) for t in (pr.get('tech') or [])}
-    content['_tailoring'] = {'highlighted_skills': [s for s in skill_names(content) if norm(s) in required],
+    content['_tailoring'] = {'highlighted_skills': [s for s in skill_names(content) if norm(s) in required or any(bilingual_soft_match(s, [js]) for js in (job.skills or []))],
                             'projects': [pr.get('name', '') for pr in content.get('projects', []) if pr.get('name')],
-                            'unconfirmed': [s for s in job.skills or [] if norm(s) not in included]}
+                            'unconfirmed': [s for s in job.skills or [] if norm(s) not in included and not any(bilingual_soft_match(s, list(included)) for _ in [1])]}
     changed = db.execute(update(Resume).where(Resume.id == r.id, Resume.user_id == user.id, Resume.version == body.version)
                          .values(content=content, version=body.version + 1, updated_at=datetime.utcnow()),
                          execution_options={'synchronize_session': False})
@@ -812,11 +1099,12 @@ def generate_resume(db: Session, user: User, job: Job, lang: str = "fa", instruc
                "confirmed_answers": confirmed, "revision_instructions": instructions}
     out = chat_json(db, user.id, "writer", S.model_writer, system,
                     [{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}], ResumeContent)
-    out = _guard_skills(out, p)
+    out = _guard_skills(out, p, lang)
     known = {norm(s) for s in skill_names(p)} | {norm(t) for pr in p.projects for t in pr.tech}
-    tailoring = {"highlighted_skills": [s.name for s in out.skills if norm(s.name) in {norm(t) for t in job.skills or []}],
+    job_skills_norm = {norm(t) for t in job.skills or []}
+    tailoring = {"highlighted_skills": [s.name for s in out.skills if norm(s.name) in job_skills_norm or any(bilingual_soft_match(s.name, [js]) for js in (job.skills or []))],
                  "projects": [pr.name for pr in out.projects],
-                 "unconfirmed": [s for s in job.skills or [] if norm(s) not in known]}
+                 "unconfirmed": [s for s in job.skills or [] if norm(s) not in known and not any(bilingual_soft_match(s, list(known)) for _ in [1])]}
     content = out.model_dump(exclude={'evidence'})
     evidence = resume_evidence(content, out.evidence, sources)
     content.update(_tailoring=tailoring, _evidence=evidence)
