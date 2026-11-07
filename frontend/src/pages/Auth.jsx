@@ -27,8 +27,8 @@ export default function Auth() {
       <form className="auth-card" onSubmit={submit}>
         <Brand />
         <div className="tabs" role="tablist">
-          <button type="button" role="tab" className={mode === 'login' ? 'on' : ''} onClick={() => setMode('login')}>ورود</button>
-          <button type="button" role="tab" className={mode === 'register' ? 'on' : ''} onClick={() => setMode('register')}>ثبت‌نام</button>
+          <button type="button" role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'on' : ''} onClick={() => setMode('login')}>ورود</button>
+          <button type="button" role="tab" aria-selected={mode === 'register'} className={mode === 'register' ? 'on' : ''} onClick={() => setMode('register')}>ثبت‌نام</button>
         </div>
         {mode === 'register' && (
           <div className="field"><label htmlFor="name">نام</label>
