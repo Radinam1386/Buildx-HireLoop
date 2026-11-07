@@ -60,7 +60,8 @@ test -s "$release/frontend/dist/index.html"
 test -s "$release/backend/app/main.py"
 python3 -m compileall -q "$release/backend/app"
 python3 -m venv "$release/.venv"
-"$release/.venv/bin/python" -m pip install --disable-pip-version-check -q -r "$release/backend/requirements.txt"
+test -d "$release/wheelhouse"
+"$release/.venv/bin/python" -m pip install --disable-pip-version-check --no-index --find-links "$release/wheelhouse" -q -r "$release/backend/requirements.txt"
 printf '%s\n' "$revision" > "$release/REVISION"
 
 if [[ -f /var/lib/hireloop/hireloop.db ]]; then

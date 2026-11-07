@@ -34,7 +34,8 @@ jobs:
           DATABASE_URL: sqlite://
           JWT_SECRET: ci-only-not-a-production-secret
         run: |
-          pip install -r backend/requirements.txt
+          python -m pip download --only-binary=:all: -r backend/requirements.txt -d wheelhouse
+          python -m pip install --no-index --find-links wheelhouse -r backend/requirements.txt
           python -m pytest backend/tests -q
       - name: Build frontend
         working-directory: frontend
@@ -43,7 +44,7 @@ jobs:
           npm run build
       - name: Package and check deployment
         run: |
-          tar --exclude='__pycache__' --exclude='*.pyc' -czf release.tgz backend/app backend/requirements.txt frontend/dist
+          tar --exclude='__pycache__' --exclude='*.pyc' -czf release.tgz backend/app backend/requirements.txt frontend/dist wheelhouse
           python deploy/check.py release.tgz
       - name: Deploy prepared release
         env:

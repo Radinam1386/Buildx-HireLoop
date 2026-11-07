@@ -19,8 +19,9 @@ if len(sys.argv) == 2:
     with tarfile.open(sys.argv[1]) as archive:
         names = {m.name.removeprefix("./") for m in archive.getmembers() if m.isfile()}
         assert {"backend/app/main.py", "backend/requirements.txt", "frontend/dist/index.html"} <= names
+        assert any(name.startswith("wheelhouse/") and name.endswith(".whl") for name in names), "Missing dependency wheels"
         for name in names:
-            assert name.startswith(("backend/app/", "frontend/dist/")) or name == "backend/requirements.txt", name
+            assert name.startswith(("backend/app/", "frontend/dist/")) or name == "backend/requirements.txt" or (name.startswith("wheelhouse/") and name.endswith(".whl")), name
             assert not any(p.startswith(".env") or p == "__pycache__" for p in Path(name).parts), name
             assert Path(name).suffix not in {".db", ".pem", ".key", ".pyc"}, name
 print("Deployment command and archive checks passed")
